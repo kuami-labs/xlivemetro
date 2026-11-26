@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db redis
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: .nvmrc }
       - uses: actions/setup-go@v7
         with: { go-version-file: services/realtime/go.mod }
