@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Les PR venant de forks n'ont accès à aucun secret
+permissions:
+  contents: read
+
+jobs:
+  qualite:
+    runs-on: ubuntu-latest
+    container: node:26-trixie
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with: { go-version-file: services/realtime/go.mod }
+      - run: npm install -g corepack && corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm lint # ESLint + go vet + gofmt
+      - run: pnpm format:check
+      - run: pnpm build
+
+  tests:
+    # Pas de « container » : la base est construite depuis db/Dockerfile (PostGIS), comme en dev
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://xlivemetro:xlivemetro@localhost:5432/xlivemetro
+      REDIS_URL: redis://localhost:6379
+      FEED_SOURCE: replay
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db redis
+      - uses: actions/setup-node@v6
+        with: { node-version-file: .nvmrc }
+      - uses: actions/setup-go@v7
+        with: { go-version-file: services/realtime/go.mod }
+      - run: npm install -g corepack && corepack enable && pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      - run: pnpm test # Vitest + go test -race

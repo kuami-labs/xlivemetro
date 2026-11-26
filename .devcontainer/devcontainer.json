@@ -1,0 +1,36 @@
+{
+  "name": "XLiveMetro",
+  "dockerComposeFile": ["../compose.yaml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "node",
+
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "golang.go",
+        "bradlc.vscode-tailwindcss",
+        "github.vscode-pull-request-github"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" }
+      }
+    }
+  },
+
+  // web, api, realtime, et PostgreSQL pour un client graphique
+  "forwardPorts": [3000, 4000, 4100, "db:5432"],
+
+  // Une fois, à la création : dépendances et .env local (jamais écrasé)
+  "postCreateCommand": "git config --global --add safe.directory /workspace && (test -f pnpm-lock.yaml && pnpm install --frozen-lockfile || true) && (test -f services/realtime/go.mod && (cd services/realtime && go mod download) || true) && (test -f .env || cp .env.example .env)"
+}

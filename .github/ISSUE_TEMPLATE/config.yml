@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question ou idée encore floue
+    url: https://github.com/kuami-labs/xlivemetro/discussions
+    about: Posez vos questions dans les Discussions.
+  - name: Faille de sécurité
+    url: https://github.com/kuami-labs/xlivemetro/security/advisories/new
+    about: Signalez-la en privé, jamais dans une issue publique.

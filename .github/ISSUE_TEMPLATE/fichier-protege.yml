@@ -1,0 +1,42 @@
+name: Changement de fichier protégé
+description: Demander une modification de la CI, de l'environnement, des dépendances, de CLAUDE.md ou des règles du projet
+labels: [needs-triage, fichier-protege]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ces fichiers ne peuvent pas être modifiés par une PR de contributeur (check `fichiers-proteges`).
+        Décrivez le changement : si un mainteneur l'accepte, il le fera lui-même et vous serez crédité comme coauteur.
+  - type: dropdown
+    id: fichier
+    attributes:
+      label: Fichier concerné
+      options:
+        - package.json / pnpm-lock.yaml (dépendance)
+        - .github/ (CI, modèles)
+        - .devcontainer/ ou compose.yaml (environnement)
+        - CLAUDE.md ou .claude/ (assistants IA)
+        - migration de base de données
+        - documentation de règles, sécurité, ADR
+        - autre
+    validations:
+      required: true
+  - type: textarea
+    id: changement
+    attributes:
+      label: Changement demandé
+      description: Le plus précis possible (nom et version de la dépendance, ligne à modifier, diff…).
+    validations:
+      required: true
+  - type: textarea
+    id: pourquoi
+    attributes:
+      label: Pourquoi
+      description: Issue ou PR liée, problème résolu, alternatives étudiées.
+    validations:
+      required: true
+  - type: input
+    id: branche
+    attributes:
+      label: Branche de votre fork contenant le changement (facultatif)
+      placeholder: votre-compte:feature/42-sujet

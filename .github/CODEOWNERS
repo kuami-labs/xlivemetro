@@ -1,0 +1,16 @@
+/.devcontainer/            @kuami-labs/xlivemetro-maintainers
+/.github/                  @kuami-labs/xlivemetro-maintainers
+/compose.yaml              @kuami-labs/xlivemetro-maintainers
+/compose.ci.yaml           @kuami-labs/xlivemetro-maintainers
+/db/Dockerfile             @kuami-labs/xlivemetro-maintainers
+/packages/db/prisma/       @kuami-labs/xlivemetro-maintainers
+/packages/proto/          @kuami-labs/xlivemetro-maintainers
+/services/realtime/go.mod @kuami-labs/xlivemetro-maintainers
+/services/realtime/go.sum @kuami-labs/xlivemetro-maintainers
+/eslint.config.mjs         @kuami-labs/xlivemetro-maintainers
+package.json               @kuami-labs/xlivemetro-maintainers
+pnpm-lock.yaml             @kuami-labs/xlivemetro-maintainers
+/SECURITY.md               @kuami-labs/xlivemetro-maintainers
+/CLAUDE.md                 @kuami-labs/xlivemetro-maintainers
+/.claude/                  @kuami-labs/xlivemetro-maintainers
+/docs/08-SECURITE.md       @kuami-labs/xlivemetro-maintainers

@@ -1,0 +1,38 @@
+name: Bug
+description: Quelque chose ne fonctionne pas comme prévu
+type: Bug
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Que se passe-t-il ?
+      description: Décrivez le problème en quelques phrases.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: |
+        1. Aller sur…
+        2. Cliquer sur…
+        3. Voir l'erreur
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Partie concernée
+      options: [realtime, api, web, mcp, base de données, environnement de dev, je ne sais pas]
+  - type: textarea
+    id: context
+    attributes:
+      label: Environnement et logs
+      description: Système, navigateur, version ou commit, extrait de logs (sans secret).

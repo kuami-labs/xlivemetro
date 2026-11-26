@@ -1,0 +1,50 @@
+name: Fichiers protégés
+
+# Refuse toute PR qui modifie ou supprime un fichier protégé,
+# sauf si elle vient d'un mainteneur listé ci-dessous ou de Dependabot.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  fichiers-proteges:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lister les fichiers modifiés par la PR
+        id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[].filename' > fichiers.txt
+          cat fichiers.txt
+
+      - name: Vérifier les fichiers protégés
+        env:
+          AUTEUR: ${{ github.event.pull_request.user.login }}
+          # Identifiants GitHub autorisés à modifier les fichiers protégés, séparés par des espaces.
+          # Mode solo : le seul mainteneur. Mode équipe : ajouter chaque membre de xlivemetro-maintainers.
+          MAINTENEURS: 'kratt15'
+        run: |
+          # Liste des chemins protégés (expressions régulières)
+          PROTEGES='^(CLAUDE\.md|\.claude/|\.github/|\.devcontainer/|compose(\.ci)?\.yaml|db/Dockerfile|\.nvmrc|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|SECURITY\.md|CODE_OF_CONDUCT\.md|LICENSE|docs/07-COLLABORATION\.md|docs/08-SECURITE\.md|docs/adr/|packages/db/prisma/migrations/|packages/proto/|services/realtime/go\.(mod|sum))'
+
+          TOUCHES=$(grep -E "$PROTEGES" fichiers.txt || true)
+          if [ -z "$TOUCHES" ]; then
+            echo "Aucun fichier protégé modifié."
+            exit 0
+          fi
+
+          AUTORISES="$MAINTENEURS dependabot[bot]"
+          if printf '%s\n' $AUTORISES | grep -qxF "$AUTEUR"; then
+            echo "Fichiers protégés modifiés par $AUTEUR (autorisé)."
+            echo "$TOUCHES"
+            exit 0
+          fi
+
+          echo "::error::Cette PR modifie ou supprime des fichiers protégés. Ouvrez une issue : un mainteneur fera le changement."
+          echo "$TOUCHES"
+          exit 1

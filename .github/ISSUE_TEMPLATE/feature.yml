@@ -1,0 +1,28 @@
+name: Fonctionnalité
+description: Proposer une amélioration ou une nouvelle fonctionnalité
+type: Feature
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Quel problème cela résout-il ?
+      description: Pour qui, et dans quelle situation ?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives envisagées
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: Je souhaite développer cette fonctionnalité moi-même

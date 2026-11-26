@@ -1,0 +1,51 @@
+# Stack de développement. Versions figées : les mêmes qu'en production.
+name: xlivemetro
+
+services:
+  # Le poste de travail : VS Code s'y attache, on y lance realtime, api et web
+  dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    command: sleep infinity
+    # Les commandes « docker compose exec dev … » tournent comme dans VS Code
+    user: node
+    working_dir: /workspace
+    # web et API joignables depuis la machine hôte (navigateur), même sans VS Code
+    ports:
+      - 127.0.0.1:3000:3000
+      - 127.0.0.1:4000:4000
+      - 127.0.0.1:4100:4100
+    volumes:
+      - .:/workspace:cached
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    # PostgreSQL 19 + PostGIS, construit sur l'image officielle (multi-architecture) : db/Dockerfile
+    build: ./db
+    environment:
+      POSTGRES_USER: xlivemetro
+      POSTGRES_PASSWORD: xlivemetro
+      POSTGRES_DB: xlivemetro
+    volumes:
+      # Données dans un dossier du projet, ignoré par git : elles survivent aux Rebuild
+      # PostgreSQL 18+ : un sous-dossier par version majeure, on monte donc /var/lib/postgresql
+      - ./db/data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U xlivemetro -d xlivemetro']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
