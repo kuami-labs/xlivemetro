@@ -288,6 +288,8 @@ jobs:
     container: node:26-trixie
     steps:
       - uses: actions/checkout@v7
+      # Le conteneur n'est pas propriétaire du dépôt : git (et l'horodatage VCS de Go) le refuserait
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-go@v7
         with: { go-version-file: services/realtime/go.mod }
       - run: npm install -g corepack && corepack enable && pnpm install --frozen-lockfile
@@ -305,7 +307,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db redis
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with: { node-version-file: .nvmrc }
       - uses: actions/setup-go@v7
         with: { go-version-file: services/realtime/go.mod }
