@@ -6,7 +6,7 @@
 
 ## Contexte
 
-IDFM ne publie pas la position GPS de la plupart des métros, RER et trams. Il publie les horaires théoriques (GTFS) et les horaires temps réel par course (GTFS-RT TripUpdates, SIRI).
+IDFM ne publie pas la position GPS de la plupart des métros, RER et trams. Il publie les horaires théoriques (GTFS) et les horaires temps réel par course (SIRI Lite Estimated Timetable, ADR 0010).
 
 ## Options
 

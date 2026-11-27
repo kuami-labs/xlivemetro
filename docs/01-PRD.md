@@ -49,15 +49,15 @@
 
 ## Données
 
-| Source (portail PRIM d'IDFM)                   | Contenu                                                | Usage                         | Fréquence                |
-| ---------------------------------------------- | ------------------------------------------------------ | ----------------------------- | ------------------------ |
-| GTFS statique IDFM                             | lignes, arrêts, tracés (`shapes`), horaires théoriques | référentiel en base (PostGIS) | import quotidien         |
-| GTFS-RT TripUpdates / SIRI Estimated Timetable | retards et horaires temps réel par course              | calcul des positions          | toutes les 30 s          |
-| SIRI Stop Monitoring                           | prochains passages par arrêt                           | fiche d'arrêt, MCP            | à la demande, avec cache |
-| Info trafic (messages de perturbation)         | perturbations par ligne                                | badges, MCP                   | toutes les 2 min         |
-| Bâtiments 3D                                   | OpenStreetMap via tuiles vectorielles                  | décor 3D                      | statique                 |
+| Source (portail PRIM d'IDFM)                    | Contenu                                                | Usage                         | Fréquence                |
+| ----------------------------------------------- | ------------------------------------------------------ | ----------------------------- | ------------------------ |
+| GTFS statique IDFM                              | lignes, arrêts, tracés (`shapes`), horaires théoriques | référentiel en base (PostGIS) | import quotidien         |
+| SIRI Lite Estimated Timetable (requête globale) | retards et horaires temps réel par course              | calcul des positions          | toutes les 30 s          |
+| SIRI Stop Monitoring                            | prochains passages par arrêt                           | fiche d'arrêt, MCP            | à la demande, avec cache |
+| Info trafic (messages de perturbation)          | perturbations par ligne                                | badges, MCP                   | toutes les 2 min         |
+| Bâtiments 3D                                    | OpenStreetMap via tuiles vectorielles                  | décor 3D                      | statique                 |
 
-Les noms exacts des endpoints, les quotas et les formats sont vérifiés sur le portail PRIM au moment de l'implémentation et notés dans `03-BACKEND.md`.
+Sources vérifiées le 2026-11-27 : voir [ADR 0010](adr/0010-sources-idfm.md). Quotas PRIM à relever avec une clé.
 
 ## Indicateurs de succès
 
