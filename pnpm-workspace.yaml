@@ -3,10 +3,13 @@ packages:
   - services/*
   - packages/*
 
-# Dépendances autorisées à lancer leurs scripts d'installation (relus : moteurs Prisma)
+# Scripts d'installation des dépendances : autorisés (true) ou refusés (false) après relecture
 allowBuilds:
   '@prisma/engines': true
   prisma: true
+  # Buf : le script ne fait que vérifier le binaire, déjà fourni par la dépendance optionnelle
+  # de la plateforme (@bufbuild/buf-linux-x64…) ; script relu, inutile
+  '@bufbuild/buf': false
 
 # Correctifs de sécurité de dépendances transitives (alertes Dependabot).
 # À retirer quand l'amont aura suivi (prisma > 7.10.1).
