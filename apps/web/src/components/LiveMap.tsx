@@ -1,23 +1,26 @@
 'use client';
 
+import type { PickingInfo } from '@deck.gl/core';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoJsonLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { Map as MapLibre, NavigationControl, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { api, type Line, type Mode } from '@/lib/api';
 import { delayOutline, hexToRgba, type RGBA } from '@/lib/colors';
-import { API_URL, ATTRIBUTION, INITIAL_VIEW, MAP_STYLE_URL, REALTIME_URL } from '@/lib/config';
+import { ATTRIBUTION, API_URL, INITIAL_VIEW, MAP_STYLE_URL, REALTIME_URL } from '@/lib/config';
+import { loadFavorites, type Favorite } from '@/lib/favorites';
 import type { WorkerIn, WorkerOut } from '@/lib/realtime.worker';
 import { THEORETICAL, interpolate, type VehicleFrame } from '@/lib/vehicles';
+import ModeFilter from './ModeFilter';
+import SearchBox from './SearchBox';
+import StationPanel from './StationPanel';
+import VehiclePanel from './VehiclePanel';
 
 // MapLibre 6 charge son worker à part : on laisse le bundler fournir son adresse
 setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString());
 
-interface Line {
-  id: string;
-  shortName: string;
-  color: string;
-}
+type Selection = { kind: 'station' | 'vehicle'; id: string } | null;
 
 interface Status {
   connected: boolean;
@@ -26,18 +29,85 @@ interface Status {
   source: string;
 }
 
+interface StationFeature {
+  id: string;
+  geometry: { coordinates: [number, number] };
+  properties: { id: string; name: string };
+}
+
+interface LineFeature {
+  properties: { id: string; color: string; mode: Mode };
+}
+
+const ALL_MODES: Mode[] = ['metro', 'rer', 'tram'];
+
+function urlModes(params: URLSearchParams): Mode[] {
+  return (params.get('mode') ?? '')
+    .split(',')
+    .filter((m): m is Mode => (ALL_MODES as string[]).includes(m));
+}
+
+function initialSelection(params: URLSearchParams): Selection {
+  const stop = params.get('stop');
+  const follow = params.get('follow');
+  if (follow) return { kind: 'vehicle', id: follow };
+  if (stop) return { kind: 'station', id: stop };
+  return null;
+}
+
 /**
  * Carte 3D : fond MapLibre (bâtiments extrudés) + couches deck.gl en surcouche.
- * Les positions sont interpolées à chaque image hors de React (docs/04-FRONTEND.md).
+ * Les positions sont interpolées à chaque image hors de React (docs/04-FRONTEND.md) ;
+ * React ne gère que les panneaux, la recherche et les filtres.
  */
 export default function LiveMap() {
   const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibre | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const linesRef = useRef<Line[]>([]);
+  const modesRef = useRef<Set<Mode>>(new Set(ALL_MODES));
+  const selectionRef = useRef<Selection>(null);
+  const subscribeRef = useRef<() => void>(() => {});
+  const rebuildRef = useRef<() => void>(() => {});
+
   const [status, setStatus] = useState<Status>({
     connected: false,
     vehicles: 0,
     dataAgeS: null,
     source: '',
   });
+  // Composant rendu seulement dans le navigateur (ssr: false) : l'URL est lisible dès le rendu
+  const [selection, setSelection] = useState<Selection>(() =>
+    initialSelection(new URLSearchParams(window.location.search)),
+  );
+  const [modes, setModes] = useState<Set<Mode>>(() => {
+    const m = urlModes(new URLSearchParams(window.location.search));
+    return new Set(m.length ? m : ALL_MODES);
+  });
+  const [favorites, setFavorites] = useState<Favorite[]>(() => loadFavorites());
+
+  const select = useCallback((s: Selection) => {
+    selectionRef.current = s;
+    setSelection(s);
+  }, []);
+
+  // URL partageable : vue, gare ou train suivi (F7, docs/04-FRONTEND.md)
+  const syncUrl = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const c = map.getCenter();
+    const p = new URLSearchParams({
+      lat: c.lat.toFixed(5),
+      lng: c.lng.toFixed(5),
+      zoom: map.getZoom().toFixed(2),
+      pitch: map.getPitch().toFixed(0),
+      bearing: map.getBearing().toFixed(0),
+    });
+    const s = selectionRef.current;
+    if (s) p.set(s.kind === 'station' ? 'stop' : 'follow', s.id);
+    if (modesRef.current.size < ALL_MODES.length) p.set('mode', [...modesRef.current].join(','));
+    window.history.replaceState(null, '', `?${p}`);
+  }, []);
 
   useEffect(() => {
     if (!container.current) return;
@@ -46,6 +116,10 @@ export default function LiveMap() {
       const v = Number(params.get(k));
       return params.has(k) && Number.isFinite(v) ? v : d;
     };
+    const m = urlModes(params);
+    modesRef.current = new Set(m.length ? m : ALL_MODES);
+    selectionRef.current = initialSelection(params);
+
     const map = new MapLibre({
       container: container.current,
       style: MAP_STYLE_URL,
@@ -56,6 +130,7 @@ export default function LiveMap() {
       maxPitch: 70,
       attributionControl: { customAttribution: ATTRIBUTION },
     });
+    mapRef.current = map;
     map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
 
     // Surcouche (canvas deck.gl au-dessus de la carte) : le mode entrelacé de deck.gl 9.4
@@ -64,12 +139,15 @@ export default function LiveMap() {
     map.addControl(overlay);
 
     let lineColors = new Map<string, RGBA>();
+    let linesGeo: { features: LineFeature[] } | null = null;
+    let stations: StationFeature[] = [];
     let staticLayers: (GeoJsonLayer | ScatterplotLayer)[] = [];
     let frame: VehicleFrame | null = null;
     let positions = new Float32Array(0);
     let fill = new Uint8Array(0);
     let outline = new Uint8Array(0);
     let raf = 0;
+    let lastFollow = 0;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     map.on('load', () => {
@@ -91,27 +169,24 @@ export default function LiveMap() {
       }
     });
 
-    void Promise.all([
-      fetch(`${API_URL}/lines`).then((r) => r.json() as Promise<Line[]>),
-      fetch(`${API_URL}/lines.geojson`).then((r) => r.json()),
-      fetch(`${API_URL}/stations.geojson`).then((r) => r.json()),
-    ]).then(([lines, linesGeo, stationsGeo]) => {
-      lineColors = new Map(lines.map((l) => [l.id, hexToRgba(l.color)]));
+    function rebuild() {
+      if (!linesGeo) return;
+      const visible = modesRef.current;
       staticLayers = [
         new GeoJsonLayer({
           id: 'lignes',
-          data: linesGeo,
-          getLineColor: (f: { properties: { color: string } }) => hexToRgba(f.properties.color),
+          // Features GeoJSON de /lines.geojson (typage deck.gl plus large que le nôtre)
+          data: linesGeo.features.filter((f) => visible.has(f.properties.mode)) as never,
+          getLineColor: (f: LineFeature) => hexToRgba(f.properties.color),
           getLineWidth: 4,
           lineWidthUnits: 'pixels',
           lineWidthMinPixels: 2,
         }),
-        new ScatterplotLayer({
+        new ScatterplotLayer<StationFeature>({
           id: 'gares',
-          data: stationsGeo.features,
-          getPosition: (f: { geometry: { coordinates: [number, number] } }) =>
-            f.geometry.coordinates,
-          getRadius: 4,
+          data: stations,
+          getPosition: (f) => f.geometry.coordinates,
+          getRadius: 5,
           radiusUnits: 'pixels',
           getFillColor: [20, 20, 24, 255],
           getLineColor: [235, 235, 235, 255],
@@ -120,7 +195,25 @@ export default function LiveMap() {
           pickable: true,
         }),
       ];
+    }
+    rebuildRef.current = rebuild;
+
+    void Promise.all([
+      api.lines(),
+      fetch(`${API_URL}/lines.geojson`).then(
+        (r) => r.json() as Promise<{ features: LineFeature[] }>,
+      ),
+      fetch(`${API_URL}/stations.geojson`).then(
+        (r) => r.json() as Promise<{ features: StationFeature[] }>,
+      ),
+    ]).then(([lines, lg, sg]) => {
+      linesRef.current = lines;
+      lineColors = new Map(lines.map((l) => [l.id, hexToRgba(l.color)]));
+      linesGeo = lg;
+      stations = sg.features;
+      rebuild();
       recolor();
+      subscribe();
     });
 
     // Couleurs par train : recalculées seulement quand un message arrive
@@ -135,10 +228,23 @@ export default function LiveMap() {
       }
     }
 
-    function render() {
+    function render(t: number) {
       if (frame) {
         interpolate(frame, reduceMotion ? frame.receivedAt : performance.now(), positions);
         const n = frame.ids.length;
+        // Caméra qui suit le train sélectionné (deux fois par seconde)
+        const sel = selectionRef.current;
+        if (sel?.kind === 'vehicle' && t - lastFollow > 500 && !map.isMoving()) {
+          const i = frame.ids.indexOf(sel.id);
+          if (i >= 0) {
+            lastFollow = t;
+            map.easeTo({
+              center: [positions[i * 2], positions[i * 2 + 1]],
+              duration: reduceMotion ? 0 : 500,
+              easing: (x) => x,
+            });
+          }
+        }
         overlay.setProps({
           layers: [
             ...staticLayers,
@@ -157,7 +263,8 @@ export default function LiveMap() {
               radiusMinPixels: 3,
               stroked: true,
               lineWidthMinPixels: 2,
-              updateTriggers: { getPosition: performance.now() },
+              pickable: true,
+              updateTriggers: { getPosition: t },
             }),
           ],
         });
@@ -168,16 +275,30 @@ export default function LiveMap() {
       raf = requestAnimationFrame(render);
     });
 
+    overlay.setProps({
+      onClick: (info: PickingInfo) => {
+        if (info.layer?.id === 'gares' && info.object) {
+          select({ kind: 'station', id: (info.object as StationFeature).properties.id });
+        } else if (info.layer?.id === 'trains' && frame && info.index >= 0) {
+          select({ kind: 'vehicle', id: frame.ids[info.index] });
+        }
+        syncUrl();
+      },
+      getCursor: ({ isHovering }) => (isHovering ? 'pointer' : 'grab'),
+    });
+
     const worker = new Worker(new URL('../lib/realtime.worker.ts', import.meta.url), {
       type: 'module',
     });
+    workerRef.current = worker;
     worker.onmessage = (e: MessageEvent<WorkerOut>) => {
-      if (e.data.type === 'status') {
-        setStatus((s) => ({ ...s, connected: e.data.type === 'status' && e.data.connected }));
+      const data = e.data;
+      if (data.type === 'status') {
+        setStatus((s) => ({ ...s, connected: data.connected }));
         return;
       }
       // Le worker horodate avec son propre performance.now() : on se recale sur le nôtre
-      frame = { ...e.data.frame, receivedAt: performance.now() };
+      frame = { ...data.frame, receivedAt: performance.now() };
       positions = new Float32Array(frame.positions.length);
       recolor();
       const f = frame;
@@ -190,30 +311,88 @@ export default function LiveMap() {
     };
     worker.postMessage({ type: 'connect', url: REALTIME_URL } satisfies WorkerIn);
 
-    // Abonnement à la zone visible (marge de 20 %), après chaque déplacement
-    const subscribe = () => {
+    // Abonnement à la zone visible (marge de 20 %) et aux lignes des modes affichés
+    function subscribe() {
       const b = map.getBounds();
       const dx = (b.getEast() - b.getWest()) * 0.2;
       const dy = (b.getNorth() - b.getSouth()) * 0.2;
+      const all = modesRef.current.size === ALL_MODES.length;
       worker.postMessage({
         type: 'subscribe',
         bbox: [b.getWest() - dx, b.getSouth() - dy, b.getEast() + dx, b.getNorth() + dy],
+        routeIds: all
+          ? []
+          : linesRef.current.filter((l) => modesRef.current.has(l.mode)).map((l) => l.id),
       } satisfies WorkerIn);
-    };
-    map.on('moveend', subscribe);
+    }
+    subscribeRef.current = subscribe;
+    map.on('moveend', () => {
+      subscribe();
+      syncUrl();
+    });
     map.once('load', subscribe);
 
     return () => {
       cancelAnimationFrame(raf);
       worker.terminate();
       map.remove();
+      mapRef.current = null;
     };
-  }, []);
+  }, [select, syncUrl]);
+
+  // Gare choisie dans la recherche ou une fiche : on y va
+  const goToStation = useCallback(
+    (id: string) => {
+      select({ kind: 'station', id });
+      syncUrl();
+      api.station(id).then(
+        (s) => {
+          mapRef.current?.flyTo({
+            center: [s.lon, s.lat],
+            zoom: Math.max(mapRef.current.getZoom(), 14),
+          });
+        },
+        () => {}, // gare introuvable : la fiche affiche déjà l'erreur
+      );
+    },
+    [select, syncUrl],
+  );
+
+  const changeModes = (next: Set<Mode>) => {
+    modesRef.current = next;
+    setModes(next);
+    rebuildRef.current();
+    subscribeRef.current();
+    syncUrl();
+  };
+
+  const close = () => {
+    select(null);
+    syncUrl();
+  };
 
   return (
     <div className="relative h-dvh w-full">
       {/* h-full plutôt que absolute : le CSS de MapLibre impose position: relative */}
       <div ref={container} className="h-full w-full" aria-label="Carte du réseau" />
+      <SearchBox favorites={favorites} onSelect={goToStation} />
+      <ModeFilter modes={modes} onChange={changeModes} />
+      {selection?.kind === 'station' && (
+        <StationPanel
+          key={selection.id}
+          id={selection.id}
+          onClose={close}
+          onFavoritesChange={() => setFavorites(loadFavorites())}
+        />
+      )}
+      {selection?.kind === 'vehicle' && (
+        <VehiclePanel
+          key={selection.id}
+          id={selection.id}
+          onClose={close}
+          onStation={goToStation}
+        />
+      )}
       <div
         role="status"
         className="absolute bottom-8 left-3 rounded bg-black/70 px-3 py-2 text-xs text-white"

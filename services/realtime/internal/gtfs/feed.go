@@ -208,7 +208,48 @@ func Load(src Source, opt Options) (*Feed, error) {
 		return nil, err
 	}
 	f.computeDistances()
+	f.fixHeadsigns()
 	return f, nil
+}
+
+// missionCode reconnaît les codes de mission du RER (« BMON », « QGAN ») qu'IDFM publie
+// comme destination.
+func missionCode(s string) bool {
+	if len(s) != 4 {
+		return false
+	}
+	for _, r := range s {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
+}
+
+// fixHeadsigns remplace une destination vide ou en code de mission par le nom du terminus.
+func (f *Feed) fixHeadsigns() {
+	names := make(map[string]string, len(f.Stops))
+	parents := make(map[string]string, len(f.Stops))
+	for _, s := range f.Stops {
+		names[s.ID] = s.Name
+		parents[s.ID] = s.ParentID
+	}
+	for i, t := range f.Trips {
+		if t.Headsign != "" && !missionCode(t.Headsign) {
+			continue
+		}
+		sts := f.StopTimes[t.ID]
+		if len(sts) == 0 {
+			continue
+		}
+		last := sts[len(sts)-1].StopID
+		if p := parents[last]; p != "" && names[p] != "" {
+			last = p
+		}
+		if n := names[last]; n != "" {
+			f.Trips[i].Headsign = n
+		}
+	}
 }
 
 func (f *Feed) loadStops(src Source, used map[string]bool) error {

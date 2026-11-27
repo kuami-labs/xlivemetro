@@ -6,7 +6,7 @@
 
 | Route       | Contenu                                                                                                              |
 | ----------- | -------------------------------------------------------------------------------------------------------------------- |
-| `/`         | la carte plein écran ; paramètres d'URL : `stop`, `line`, `follow`, `mode`, `lat`, `lng`, `zoom`, `pitch`, `bearing` |
+| `/`         | la carte plein écran ; paramètres d'URL : `stop`, `follow`, `mode` (liste), `lat`, `lng`, `zoom`, `pitch`, `bearing` |
 | `/lignes`   | liste des lignes et leur état (rendu serveur, utile au référencement)                                                |
 | `/a-propos` | sources, licences IDFM et OSM, fonctionnement des positions estimées, MCP                                            |
 
@@ -35,16 +35,16 @@ Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'o
 
 ## Composants
 
-| Composant                 | Rôle                                                                   |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `LiveMap`                 | instancie MapLibre + `MapboxOverlay` deck.gl, gère la caméra           |
-| `RealtimeClient`          | WebSocket, reconnexion avec back-off, Web Worker de décodage           |
-| `StopPanel`               | fiche d'une gare : prochains passages (TanStack Query, rafraîchi 30 s) |
-| `VehiclePanel`            | fiche d'un train suivi                                                 |
-| `LineFilter`, `SearchBox` | filtres et recherche (Ctrl+K)                                          |
-| `DisruptionBadge`         | état d'une ligne, message en texte brut                                |
-| `FreshnessIndicator`      | âge des données, « estimé » / « théorique »                            |
-| `Attribution`             | mentions IDFM, OSM, tuiles                                             |
+| Composant                 | Rôle                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------ |
+| `LiveMap`                 | MapLibre + `MapboxOverlay` deck.gl, sélection au clic, caméra qui suit un train, URL partageable |
+| `RealtimeClient`          | WebSocket, reconnexion avec back-off, Web Worker de décodage                                     |
+| `StationPanel`            | fiche d'une gare : lignes, prochains départs (rafraîchis toutes les 30 s), favori                |
+| `VehiclePanel`            | fiche d'un train suivi                                                                           |
+| `ModeFilter`, `SearchBox` | filtre par mode, recherche de gare (Ctrl+K), favoris (`localStorage`)                            |
+| `DisruptionBadge`         | état d'une ligne, message en texte brut                                                          |
+| `FreshnessIndicator`      | âge des données, « estimé » / « théorique »                                                      |
+| `Attribution`             | mentions IDFM, OSM, tuiles                                                                       |
 
 ## Accessibilité
 

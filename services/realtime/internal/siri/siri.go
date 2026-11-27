@@ -126,8 +126,9 @@ func convert(ref, prefix string) (string, bool) {
 	if !ok {
 		return "", false
 	}
+	// Les codes peuvent contenir « : » (ex. « monomodalStopPlace:45102 » pour certains quais RER)
 	code = strings.TrimSuffix(code, ":")
-	if code == "" || strings.Contains(code, ":") {
+	if code == "" {
 		return "", false
 	}
 	return "IDFM:" + code, true
