@@ -1,0 +1,64 @@
+// Messages WebSocket du service temps réel (docs/03-BACKEND.md, ADR 0013).
+syntax = "proto3";
+
+package xlivemetro.v1;
+
+option go_package = "github.com/kuami-labs/xlivemetro/services/realtime/gen/xlivemetro/v1;xlivemetrov1";
+
+// Position estimée d'un train (ADR 0004).
+message Vehicle {
+  string id = 1;          // course datée : trip_id@AAAAMMJJ
+  string route_id = 2;    // IDFM:C01742
+  float lat = 3;
+  float lon = 4;
+  float bearing = 5;      // degrés, 0 = nord
+  float speed = 6;        // m/s le long du tracé, pour l'interpolation côté client
+  sint32 delay = 7;       // retard au prochain arrêt, en secondes
+  bool at_stop = 8;
+  bool theoretical = 9;   // aucune donnée temps réel
+  string next_stop_id = 10;
+  string headsign = 11;
+}
+
+// Rectangle géographique (WGS 84).
+message BBox {
+  float west = 1;
+  float south = 2;
+  float east = 3;
+  float north = 4;
+}
+
+// Client → serveur : zone et lignes suivies. Sans Subscribe, tout le réseau est envoyé.
+message Subscribe {
+  BBox bbox = 1;
+  repeated string route_ids = 2; // vide = toutes les lignes
+}
+
+message ClientMessage {
+  oneof msg {
+    Subscribe subscribe = 1;
+  }
+}
+
+// État complet de la zone, à la connexion et après chaque Subscribe.
+message Snapshot {
+  int64 time_ms = 1;
+  repeated Vehicle vehicles = 2;
+  string source = 3;          // synthetic | replay | prim
+  int64 data_time_ms = 4;     // horodatage des données temps réel (0 si aucune)
+}
+
+// Différences depuis le message précédent.
+message Delta {
+  int64 time_ms = 1;
+  repeated Vehicle upserts = 2;
+  repeated string removed = 3;
+  int64 data_time_ms = 4;
+}
+
+message ServerMessage {
+  oneof msg {
+    Snapshot snapshot = 1;
+    Delta delta = 2;
+  }
+}

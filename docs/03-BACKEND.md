@@ -5,7 +5,7 @@
 ## Vue d'ensemble
 
 ```
-PRIM (IDFM) ──► realtime (Go) ──► Redis (dernier état, pub/sub) ──► api (NestJS) ──► mcp
+PRIM (IDFM) ──► realtime (Go, état en mémoire) ◄── GET /vehicles/{id} ── api (NestJS) ──► mcp
                     │                                                    ▲
                     └── WebSocket binaire ──► navigateur ◄── REST ───────┘
 PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
@@ -20,9 +20,9 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 | `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                   |
 | `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique |
 | `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                             |
-| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par mode, envoi de diffs binaires                                                                                    |
+| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par ligne, instantané puis différences en Protocol Buffers (ADR 0013)                                                |
+| `internal/app`                   | Assemblage : chargement du référentiel, cycle d'ingestion (`FEED_INTERVAL`), calcul et diffusion toutes les 5 s, changement de jour                                      |
 | `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                    |
-| `internal/store`                 | Lecture du référentiel (pgx), écriture du dernier état et pub/sub dans Redis                                                                                             |
 
 **Messages WebSocket** (définis dans `packages/proto/realtime.proto`) :
 
@@ -32,11 +32,11 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 **Règles**
 
-- Une seule boucle d'ingestion par instance ; si plusieurs instances, verrou Redis (une seule appelle PRIM).
+- Une seule instance et une seule boucle d'ingestion (ADR 0013) ; avec plusieurs instances, il faudra un verrou d'ingestion partagé.
 - Respect strict des quotas : intervalle minimal, `Retry-After`, back-off exponentiel.
 - Panne de la source : l'état précédent continue d'être servi, avec son âge (`stale_since`).
 - Le client WebSocket lent est déconnecté (file d'envoi bornée) : il ne ralentit jamais les autres.
-- Endpoints HTTP : `GET /health`, `GET /ws` (upgrade), `GET /metrics` (format Prometheus, réseau interne).
+- Endpoints HTTP : `GET /health` (source, âge du dernier cycle, trains, clients ; `degraded` au-delà de 3 cycles sans données), `GET /ws` (WebSocket), `GET /vehicles/{id}` (état d'un train, pour l'API, réseau interne). `GET /metrics` (Prometheus) reste à faire.
 
 ## API (NestJS, `apps/api`)
 
