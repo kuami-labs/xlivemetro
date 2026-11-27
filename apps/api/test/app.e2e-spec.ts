@@ -34,6 +34,8 @@ describe('API (e2e)', () => {
       .expect({ status: 'ok', db: 'ok', realtime: 'ok' }));
 
   it('GET /lines filtre par mode', async () => {
+    const all = await request(app.getHttpServer()).get('/lines').expect(200);
+    expect(all.body.map((l: { shortName: string }) => l.shortName)).toEqual(['1', 'A']);
     const res = await request(app.getHttpServer()).get('/lines?mode=rer').expect(200);
     expect(res.body).toHaveLength(1);
     expect(res.headers['cache-control']).toContain('max-age=3600');

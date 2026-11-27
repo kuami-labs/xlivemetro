@@ -27,6 +27,7 @@ import {
   RAME,
   behind,
   haloColor,
+  arrowSize,
   ringWidth,
   rameMatrix,
   trailMeters,
@@ -409,7 +410,8 @@ export default function LiveMap() {
             getColor: (_: unknown, { index }: { index: number }) => color(index),
             // deck.gl tourne dans le sens trigonométrique ; le cap est dans le sens horaire
             getAngle: (_: unknown, { index }: { index: number }) => -f.bearings[index],
-            getSize: 28,
+            // Petites flèches en vue d'ensemble (près de 1 000 trains), plus grandes de près
+            getSize: arrowSize(map.getZoom()),
             sizeUnits: 'pixels',
             billboard: false,
             pickable: true,

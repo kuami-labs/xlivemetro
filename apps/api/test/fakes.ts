@@ -33,7 +33,8 @@ export const DEFENSE: Station = {
 };
 
 export class FakeRepository {
-  lines = () => Promise.resolve([M1, RERA]);
+  // Ordre volontairement mélangé : l'API doit trier
+  lines = () => Promise.resolve([RERA, M1]);
   stations = () => Promise.resolve([CDG, DEFENSE]);
   lineShapes = (): Promise<LineShape[]> =>
     Promise.resolve([{ id: M1.id, geometry: { type: 'MultiLineString', coordinates: [] } }]);

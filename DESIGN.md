@@ -50,11 +50,11 @@ Chargées par `next/font` (auto-hébergées, aucune requête vers Google côté 
 
 Trois représentations au choix (`RepresentationPicker`, préférence en `localStorage`) :
 
-| Représentation     | Rendu                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| Pastilles (défaut) | pastille à la couleur de la ligne, sillage des 30 dernières secondes, anneau de retard |
-| Flèches            | flèche orientée selon le sens de circulation (utile sur les troncs communs)            |
-| 3D                 | rames 3D dès le zoom 15 (pastilles au-delà), halo au sol coloré selon le retard        |
+| Représentation     | Rendu                                                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Pastilles (défaut) | pastille à la couleur de la ligne, sillage des 30 dernières secondes, anneau de retard                                      |
+| Flèches            | flèche orientée selon le sens de circulation (utile sur les troncs communs), 12 px en vue d'ensemble, jusqu'à 30 px de près |
+| 3D                 | rames 3D dès le zoom 15 (pastilles au-delà), halo au sol coloré selon le retard                                             |
 
 **Retard** : l'anneau change de couleur **et d'épaisseur** (2 / 3,5 / 5 px) ; il est gris pour un horaire théorique. L'information ne repose jamais sur la couleur seule, et le retard est toujours écrit dans les fiches. En 3D, un anneau se lirait mal en perspective : le halo au sol le remplace. La légende suit la représentation affichée.
 
