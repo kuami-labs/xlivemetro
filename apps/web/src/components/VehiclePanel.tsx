@@ -36,31 +36,40 @@ export default function VehiclePanel({
     };
   }, [id]);
 
+  const late = v && !v.theoretical && v.delaySeconds >= 120;
+  const veryLate = v && !v.theoretical && v.delaySeconds >= 300;
   return (
     <Panel
       onClose={onClose}
       title={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {v?.line && <LineBadge line={v.line} />}
-          <h2 className="truncate text-base font-semibold">{v ? `Vers ${v.headsign}` : 'Train'}</h2>
+          <h2 className="truncate text-lg font-bold">{v ? `Vers ${v.headsign}` : 'Train'}</h2>
         </div>
       }
     >
-      {gone && <p className="text-sm text-neutral-400">Ce train est arrivé ou n’est plus suivi.</p>}
+      {gone && <p className="text-sm text-muted">Ce train est arrivé ou n’est plus suivi.</p>}
       {v && (
-        <>
-          <p className="mb-3 text-sm">
-            {v.atStop ? 'À quai · ' : ''}
-            {delayLabel(v.delaySeconds, v.theoretical)} · position estimée
+        <div className="flex flex-col gap-3.5">
+          <p className="font-mono text-[13px]">
+            <span className={veryLate ? 'text-alert' : late ? 'text-warn' : 'text-text-2'}>
+              {delayLabel(v.delaySeconds, v.theoretical)}
+            </span>
+            <span className="text-muted">
+              {v.atStop ? ' · à quai' : ''} · position estimée · suivi
+            </span>
           </p>
-          <h3 className="mb-2 text-sm font-medium text-neutral-400">Prochains arrêts</h3>
-          <ol className="space-y-1 text-sm">
+          <h3 className="label-caps">Prochains arrêts</h3>
+          <ol className="flex flex-col">
             {v.nextStops.map((s) => (
-              <li key={s.expected + s.station} className="flex justify-between gap-2">
+              <li
+                key={s.expected + s.station}
+                className="flex items-center justify-between gap-2 border-b border-divider py-2 text-sm last:border-0"
+              >
                 {s.stationId ? (
                   <button
                     type="button"
-                    className="truncate text-left hover:underline"
+                    className="truncate text-left hover:text-accent hover:underline"
                     onClick={() => onStation(s.stationId!)}
                   >
                     {s.station}
@@ -68,11 +77,11 @@ export default function VehiclePanel({
                 ) : (
                   <span className="truncate">{s.station}</span>
                 )}
-                <span className="tabular-nums text-neutral-300">{timeLabel(s.expected)}</span>
+                <span className="font-mono text-text-2">{timeLabel(s.expected)}</span>
               </li>
             ))}
           </ol>
-        </>
+        </div>
       )}
     </Panel>
   );

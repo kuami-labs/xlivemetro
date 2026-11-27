@@ -1,6 +1,6 @@
 # Frontend – XLiveMetro
 
-> Next.js (App Router), MapLibre GL JS + deck.gl. Le système de design est à créer (`DESIGN.md`), avec une identité propre.
+> Next.js (App Router), MapLibre GL JS + deck.gl. Système de design : [`DESIGN.md`](../DESIGN.md) ; rendu 3D : [ADR 0016](adr/0016-rendu-3d-et-design.md).
 
 ## Pages
 
@@ -14,14 +14,14 @@ Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'o
 
 ## Couches de la carte
 
-| Couche                    | Technologie                                                              | Contenu                                               |
-| ------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------- |
-| Fond + bâtiments 3D       | MapLibre (style vectoriel, `fill-extrusion`)                             | thème sombre par défaut, clair en option              |
-| Tracés des lignes         | deck.gl `PathLayer`                                                      | couleurs officielles, lignes perturbées en pointillés |
-| Gares                     | deck.gl `ScatterplotLayer` + `TextLayer`                                 | taille selon le zoom                                  |
-| Véhicules                 | deck.gl `ScenegraphLayer` (modèle 3D léger) ou `IconLayer` selon le zoom | couleur du retard, cap                                |
-| Traînées                  | deck.gl `TripsLayer`                                                     | sillage des 60 dernières secondes                     |
-| Chaleur des retards (F10) | deck.gl `HeatmapLayer`                                                   |                                                       |
+| Couche                   | Technologie                                                                          | Contenu                                |
+| ------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------- |
+| Fond, bâtiments 3D, ciel | MapLibre (style OpenFreeMap sombre ou clair, `fill-extrusion`, `setSky`, `setLight`) | selon le thème                         |
+| Tracés des lignes        | MapLibre (couches `line` : halo + trait), au-dessus des bâtiments                    | couleurs officielles, filtrés par mode |
+| Gares                    | deck.gl `ScatterplotLayer`                                                           | cliquables                             |
+| Trains – pastilles       | deck.gl `ScatterplotLayer` + `LineLayer` (sillage de 30 s)                           | anneau de retard d'épaisseur variable  |
+| Trains – flèches         | deck.gl `IconLayer`                                                                  | orientées selon le cap                 |
+| Trains – 3D              | deck.gl `SimpleMeshLayer` (une géométrie instanciée, matrice par rame) + halo au sol | dès le zoom 15, pastilles au-delà      |
 
 ## Performances (le cœur du projet)
 
@@ -35,16 +35,17 @@ Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'o
 
 ## Composants
 
-| Composant                 | Rôle                                                                                             |
-| ------------------------- | ------------------------------------------------------------------------------------------------ |
-| `LiveMap`                 | MapLibre + `MapboxOverlay` deck.gl, sélection au clic, caméra qui suit un train, URL partageable |
-| `RealtimeClient`          | WebSocket, reconnexion avec back-off, Web Worker de décodage                                     |
-| `StationPanel`            | fiche d'une gare : lignes, prochains départs (rafraîchis toutes les 30 s), favori                |
-| `VehiclePanel`            | fiche d'un train suivi                                                                           |
-| `ModeFilter`, `SearchBox` | filtre par mode, recherche de gare (Ctrl+K), favoris (`localStorage`)                            |
-| `DisruptionBadge`         | état d'une ligne, message en texte brut                                                          |
-| `FreshnessIndicator`      | âge des données, « estimé » / « théorique »                                                      |
-| `Attribution`             | mentions IDFM, OSM, tuiles                                                                       |
+| Composant                                         | Rôle                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `LiveMap`                                         | MapLibre + `MapboxOverlay` deck.gl, sélection au clic, caméra qui suit un train, URL partageable |
+| `RealtimeClient`                                  | WebSocket, reconnexion avec back-off, Web Worker de décodage                                     |
+| `StationPanel`                                    | fiche d'une gare : lignes, prochains départs (rafraîchis toutes les 30 s), favori                |
+| `VehiclePanel`                                    | fiche d'un train suivi                                                                           |
+| `ModeFilter`, `SearchBox`, `RepresentationPicker` | filtre par mode, recherche (Ctrl+K) et favoris, représentation des trains                        |
+| `ViewControls`, `Legend`, `StatusBar`             | zoom, nord, inclinaison 2D/3D ; légende du retard ; état du temps réel                           |
+| `DisruptionBadge`                                 | état d'une ligne, message en texte brut                                                          |
+| `FreshnessIndicator`                              | âge des données, « estimé » / « théorique »                                                      |
+| `Attribution`                                     | mentions IDFM, OSM, tuiles                                                                       |
 
 ## Accessibilité
 

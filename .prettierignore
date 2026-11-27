@@ -7,3 +7,4 @@ coverage/
 LICENSE
 packages/db/src/generated/
 fixtures/gtfs-mini/
+docs/captures/

@@ -11,11 +11,3 @@ export function hexToRgba(hex: string, alpha = 255): RGBA {
     alpha,
   ];
 }
-
-/** Contour d'un train selon son retard (secondes) ; gris si horaires théoriques. */
-export function delayOutline(delay: number, theoretical: boolean): RGBA {
-  if (theoretical) return [140, 140, 140, 255];
-  if (delay >= 300) return [230, 57, 70, 255];
-  if (delay >= 120) return [244, 162, 97, 255];
-  return [255, 255, 255, 255];
-}

@@ -1,26 +1,105 @@
 @import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Jetons du système de design (DESIGN.md). Thème sombre par défaut, clair au choix :
+ * <html data-theme="light">. Les couleurs des lignes restent les couleurs officielles IDFM.
+ */
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0f14;
+  --surface: #121821;
+  --surface-2: #1a2230;
+  --border: #263142;
+  --divider: #1e2735;
+  --text: #e6edf5;
+  --text-2: #c3ccd8;
+  --muted: #8b98a9;
+  --accent: #22d3ee;
+  --on-accent: #0b0f14;
+  --accent-soft: rgb(34 211 238 / 0.2);
+  --warn: #f5a524;
+  --alert: #f0506e;
+  --warn-bg: #2a1e0b;
+  --warn-border: #7a4e0f;
+  --warn-title: #fbd38d;
+  --overlay: rgb(18 24 33 / 0.92);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --border: #d5dce5;
+  --divider: #e6ebf1;
+  --text: #0e1621;
+  --text-2: #33404f;
+  --muted: #536173;
+  --accent: #0e7490;
+  --on-accent: #ffffff;
+  --accent-soft: rgb(8 145 178 / 0.18);
+  --warn: #b45309;
+  --alert: #be123c;
+  --warn-bg: #fff7e6;
+  --warn-border: #f2c98a;
+  --warn-title: #92400e;
+  --overlay: rgb(255 255 255 / 0.94);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-divider: var(--divider);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-alert: var(--alert);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-border: var(--warn-border);
+  --color-warn-title: var(--warn-title);
+  --color-overlay: var(--overlay);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* Libellés en capitales espacées (titres de section) */
+.label-caps {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Contrôles de MapLibre aux couleurs du thème */
+.maplibregl-ctrl-attrib {
+  background: var(--overlay) !important;
+  color: var(--muted);
+  font-size: 11px;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
