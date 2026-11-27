@@ -13,7 +13,8 @@ import {
 import { applyMessage, toFrame } from './vehicles';
 
 export type WorkerIn =
-  { type: 'connect'; url: string } | { type: 'subscribe'; bbox: [number, number, number, number] };
+  | { type: 'connect'; url: string }
+  | { type: 'subscribe'; bbox: [number, number, number, number]; routeIds: string[] };
 
 export type WorkerOut =
   { type: 'frame'; frame: ReturnType<typeof toFrame> } | { type: 'status'; connected: boolean };
@@ -23,6 +24,7 @@ const state = new Map<string, Vehicle>();
 let socket: WebSocket | null = null;
 let url = '';
 let bbox: [number, number, number, number] | null = null;
+let routeIds: string[] = [];
 let retry = 0;
 let dataTime = 0;
 let source = '';
@@ -34,7 +36,7 @@ function send(b: [number, number, number, number]) {
   const msg = create(ClientMessageSchema, {
     msg: {
       case: 'subscribe',
-      value: create(SubscribeSchema, { bbox: { west, south, east, north } }),
+      value: create(SubscribeSchema, { bbox: { west, south, east, north }, routeIds }),
     },
   });
   socket.send(toBinary(ClientMessageSchema, msg));
@@ -79,6 +81,7 @@ ctx.onmessage = (e: MessageEvent<WorkerIn>) => {
     connect();
   } else if (e.data.type === 'subscribe') {
     bbox = e.data.bbox;
+    routeIds = e.data.routeIds;
     send(bbox);
   }
 };

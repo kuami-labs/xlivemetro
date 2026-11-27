@@ -46,7 +46,10 @@ func TestIDs(t *testing.T) {
 	if s, ok := StopToGTFS("STIF:StopPoint:Q:463158:"); !ok || s != "IDFM:463158" {
 		t.Errorf("arrêt = %q", s)
 	}
-	for _, bad := range []string{"", "STIF:StopPoint:Q::", "STIF:StopArea:SP:1:", "STIF:StopPoint:Q:1:2:"} {
+	if s, ok := StopToGTFS(StopFromGTFS("IDFM:monomodalStopPlace:45102")); !ok || s != "IDFM:monomodalStopPlace:45102" {
+		t.Errorf("aller-retour d'un quai à code composé : %q", s)
+	}
+	for _, bad := range []string{"", "STIF:StopPoint:Q::", "STIF:StopArea:SP:1:"} {
 		if _, ok := StopToGTFS(bad); ok {
 			t.Errorf("StopToGTFS(%q) devrait échouer", bad)
 		}

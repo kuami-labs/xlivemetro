@@ -150,3 +150,20 @@ func TestActiveServicesAndWriteDir(t *testing.T) {
 		t.Errorf("journée type inactive : %v", a)
 	}
 }
+
+func TestFixHeadsigns(t *testing.T) {
+	if !missionCode("BMON") || missionCode("Bmon") || missionCode("BMONT") || missionCode("") {
+		t.Error("missionCode")
+	}
+	f := &Feed{
+		Stops: []Stop{{ID: "P", Name: "Marne-la-Vallée Chessy"}, {ID: "Q", Name: "Quai", ParentID: "P"}},
+		Trips: []Trip{{ID: "t1", Headsign: "QGAN"}, {ID: "t2", Headsign: "Boissy"}, {ID: "t3"}},
+		StopTimes: map[string][]StopTime{
+			"t1": {{StopID: "Q"}}, "t2": {{StopID: "Q"}}, "t3": {{StopID: "Q"}},
+		},
+	}
+	f.fixHeadsigns()
+	if f.Trips[0].Headsign != "Marne-la-Vallée Chessy" || f.Trips[1].Headsign != "Boissy" || f.Trips[2].Headsign != "Marne-la-Vallée Chessy" {
+		t.Errorf("destinations : %+v", f.Trips)
+	}
+}
