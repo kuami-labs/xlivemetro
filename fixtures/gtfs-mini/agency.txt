@@ -1,0 +1,3 @@
+agency_id,agency_name,agency_url,agency_timezone
+IDFM:Operator_100,RATP,https://www.iledefrance-mobilites.fr,Europe/Paris
+IDFM:71,RER,https://www.iledefrance-mobilites.fr,Europe/Paris

@@ -2,3 +2,14 @@ packages:
   - apps/*
   - services/*
   - packages/*
+
+# Dépendances autorisées à lancer leurs scripts d'installation (relus : moteurs Prisma)
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+
+# Correctifs de sécurité de dépendances transitives (alertes Dependabot).
+# À retirer quand l'amont aura suivi (prisma > 7.10.1).
+overrides:
+  # GHSA-7589-6fvf-x4pw : @prisma/config@7.10.1 fige effect@3.20.0
+  '@prisma/config>effect': ^3.22.1

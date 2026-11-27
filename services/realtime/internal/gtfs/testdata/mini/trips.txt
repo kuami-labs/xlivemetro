@@ -1,0 +1,4 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
+M1,S1,T1,Château de Vincennes,0,SH1
+M1,S2,T2,Château de Vincennes,0,SH1
+BUS,S1,TB,Bus,0,SHB

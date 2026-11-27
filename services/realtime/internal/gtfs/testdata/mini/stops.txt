@@ -1,0 +1,6 @@
+stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station,wheelchair_boarding
+GA,Gare A,48.8500,2.3000,1,,1
+A,Gare A,48.8500,2.3000,0,GA,1
+B,Gare B,48.8500,2.3100,0,,0
+C,Gare C,48.8500,2.3200,0,,0
+X,Arrêt bus,48.9,2.4,0,,0

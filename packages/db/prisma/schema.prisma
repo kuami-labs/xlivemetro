@@ -1,0 +1,141 @@
+// Schéma XLiveMetro : référentiel GTFS filtré (métro, RER, tram). Voir docs/05-DATABASE.md.
+// Le temps réel ne passe pas par PostgreSQL (mémoire du service Go + Redis).
+// Les colonnes géographiques (PostGIS) sont déclarées Unsupported : requêtes en SQL brut.
+// Les tables sont remplies par l'import GTFS (services/realtime/cmd/gtfsimport), jamais par Prisma.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Mode {
+  metro
+  rer
+  tram
+}
+
+model FeedVersion {
+  id         Int      @id @default(autoincrement())
+  importedAt DateTime @default(now()) @map("imported_at")
+  sourceUrl  String   @map("source_url")
+  sha256     String
+  routes     Int
+  trips      Int
+  stopTimes  Int      @map("stop_times")
+
+  @@map("feed_versions")
+}
+
+model Agency {
+  id     String  @id
+  name   String
+  url    String?
+  routes Route[]
+
+  @@map("agencies")
+}
+
+model Route {
+  id        String @id
+  agencyId  String @map("agency_id")
+  shortName String @map("short_name")
+  longName  String @map("long_name")
+  mode      Mode
+  color     String
+  textColor String @map("text_color")
+  sortOrder Int    @default(0) @map("sort_order")
+  agency    Agency @relation(fields: [agencyId], references: [id])
+  trips     Trip[]
+
+  @@index([mode])
+  @@map("routes")
+}
+
+model Stop {
+  id           String                                @id
+  name         String
+  lat          Float
+  lon          Float
+  geom         Unsupported("geography(Point, 4326)")
+  locationType Int                                   @default(0) @map("location_type")
+  parentId     String?                               @map("parent_id")
+  wheelchair   Int                                   @default(0)
+  parent       Stop?                                 @relation("StopParent", fields: [parentId], references: [id])
+  children     Stop[]                                @relation("StopParent")
+  stopTimes    StopTime[]
+
+  @@index([parentId])
+  @@map("stops")
+}
+
+model Shape {
+  id      String                                     @id
+  geom    Unsupported("geography(LineString, 4326)")
+  lengthM Float                                      @map("length_m")
+  trips   Trip[]
+
+  @@map("shapes")
+}
+
+model Trip {
+  id          String     @id
+  routeId     String     @map("route_id")
+  serviceId   String     @map("service_id")
+  shapeId     String     @map("shape_id")
+  headsign    String
+  directionId Int        @map("direction_id")
+  route       Route      @relation(fields: [routeId], references: [id])
+  shape       Shape      @relation(fields: [shapeId], references: [id])
+  stopTimes   StopTime[]
+
+  @@index([routeId])
+  @@index([serviceId])
+  @@map("trips")
+}
+
+/// Heures en secondes depuis minuit du jour de service (peuvent dépasser 24 h, comme en GTFS).
+model StopTime {
+  tripId       String @map("trip_id")
+  stopSequence Int    @map("stop_sequence")
+  stopId       String @map("stop_id")
+  arrival      Int
+  departure    Int
+  /// Distance le long du tracé, en mètres, calculée à l'import (ADR 0010).
+  distM        Float  @map("dist_m")
+  trip         Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stop         Stop   @relation(fields: [stopId], references: [id])
+
+  @@id([tripId, stopSequence])
+  @@index([stopId])
+  @@map("stop_times")
+}
+
+model Calendar {
+  serviceId String   @id @map("service_id")
+  monday    Boolean
+  tuesday   Boolean
+  wednesday Boolean
+  thursday  Boolean
+  friday    Boolean
+  saturday  Boolean
+  sunday    Boolean
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+
+  @@map("calendars")
+}
+
+model CalendarDate {
+  serviceId     String   @map("service_id")
+  date          DateTime @db.Date
+  /// 1 : service ajouté ce jour, 2 : service retiré (GTFS).
+  exceptionType Int      @map("exception_type")
+
+  @@id([serviceId, date])
+  @@map("calendar_dates")
+}
