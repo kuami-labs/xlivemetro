@@ -17,7 +17,7 @@ L'ADR 0005 prévoit de rejouer des réponses PRIM réellement enregistrées. Au 
 
 ## Décision
 
-Option 2. La source `replay` lit des fichiers SIRI Lite ; ces fichiers sont d'abord produits par le générateur (`cmd/synth`), puis remplacés ou complétés par des enregistrements réels (`cmd/record`) quand une clé existera et que la redistribution sera confirmée. Le décodeur est le même dans les deux cas : le générateur suit la structure SIRI Lite publique (norme SIRI, profil Lite) et sera recalé sur une vraie réponse dès la première clé.
+Option 2, sous la forme d'une source à part entière, `FEED_SOURCE=synthetic` (valeur par défaut de `.env.example` et de la CI) : le flux est généré **à chaque cycle** depuis le référentiel chargé, au lieu de fichiers versionnés (aucun fichier volumineux, valable quelle que soit la date). La source `replay` reste prévue pour des enregistrements réels (`cmd/record`) quand une clé existera et que la redistribution sera confirmée. Le décodeur et le rapprochement avec le GTFS (ligne, arrêt, heure théorique) sont les mêmes dans tous les cas : le générateur suit la structure SIRI Lite publique (norme SIRI, profil Lite) et sera recalé sur une vraie réponse dès la première clé.
 
 Le GTFS IDFM est publié sous Licence Mobilités : les extraits versionnés dans `fixtures/` portent la mention de la source et de la licence (`fixtures/README.md`).
 

@@ -13,14 +13,16 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## Service `realtime` (Go)
 
-| Package             | Rôle                                                                                                                         |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `internal/feed`     | Interface `Source` : `prim` (appels réels) ou `replay` (fichiers de `fixtures/replay`). Choix par `FEED_SOURCE`              |
-| `internal/ingest`   | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)           |
-| `internal/position` | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`) |
-| `internal/hub`      | Connexions WebSocket, abonnement par zone (bbox) et par mode, envoi de diffs binaires                                        |
-| `internal/recorder` | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                        |
-| `internal/store`    | Lecture du référentiel (pgx), écriture du dernier état et pub/sub dans Redis                                                 |
+| Package                          | Rôle                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `internal/feed`                  | Interface `Source` : `synthetic` (généré depuis le référentiel, ADR 0011), `replay` (réponses enregistrées) ou `prim` (appels réels). Choix par `FEED_SOURCE`            |
+| `internal/ingest`                | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)                                                       |
+| `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                   |
+| `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique |
+| `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                             |
+| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par mode, envoi de diffs binaires                                                                                    |
+| `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                    |
+| `internal/store`                 | Lecture du référentiel (pgx), écriture du dernier état et pub/sub dans Redis                                                                                             |
 
 **Messages WebSocket** (définis dans `packages/proto/realtime.proto`) :
 

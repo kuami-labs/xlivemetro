@@ -16,17 +16,17 @@ L'environnement est **du code**, versionné avec le projet. Un contributeur n'in
 
 ## Parité dev / prod
 
-|                      | Dev                                                       | Prod                                   |
-| -------------------- | --------------------------------------------------------- | -------------------------------------- |
-| Système              | Debian trixie                                             | Debian trixie                          |
-| Node (LTS)           | 26                                                        | 26                                     |
-| Go                   | 1.27                                                      | 1.27                                   |
-| PostgreSQL + PostGIS | 19 / 3.7                                                  | 19 / 3.7                               |
-| Redis                | 8                                                         | 8                                      |
-| Configuration        | fichier `.env` local                                      | variables d'environnement (Coolify)    |
-| Flux temps réel      | rejeu enregistré (`FEED_SOURCE=replay`) ou votre clé PRIM | PRIM, clé de l'instance                |
-| Données              | référentiel réduit (`pnpm db:seed`)                       | GTFS IDFM complet (`pnpm gtfs:import`) |
-| Rechargement à chaud | oui                                                       | non                                    |
+|                      | Dev                                                          | Prod                                   |
+| -------------------- | ------------------------------------------------------------ | -------------------------------------- |
+| Système              | Debian trixie                                                | Debian trixie                          |
+| Node (LTS)           | 26                                                           | 26                                     |
+| Go                   | 1.27                                                         | 1.27                                   |
+| PostgreSQL + PostGIS | 19 / 3.7                                                     | 19 / 3.7                               |
+| Redis                | 8                                                            | 8                                      |
+| Configuration        | fichier `.env` local                                         | variables d'environnement (Coolify)    |
+| Flux temps réel      | flux synthétique (`FEED_SOURCE=synthetic`) ou votre clé PRIM | PRIM, clé de l'instance                |
+| Données              | référentiel réduit (`pnpm db:seed`)                          | GTFS IDFM complet (`pnpm gtfs:import`) |
+| Rechargement à chaud | oui                                                          | non                                    |
 
 Les six premières lignes sont **identiques**. Les autres diffèrent **exprès**.
 
@@ -49,7 +49,7 @@ Sur votre machine, et rien d'autre :
    git clone git@github.com:VOTRE-COMPTE/xlivemetro.git
    ```
 2. Ouvrez le dossier dans VS Code, puis **F1** → **Dev Containers: Reopen in Container**. Le premier build prend quelques minutes.
-3. À la création, le conteneur installe les dépendances et copie `.env.example` en `.env`. Rien d'autre à renseigner : le flux temps réel est rejoué depuis `fixtures/replay`. Pour les données réelles, ajoutez votre clé PRIM ([voir plus bas](#la-clé-prim-optionnelle)).
+3. À la création, le conteneur installe les dépendances et copie `.env.example` en `.env`. Rien d'autre à renseigner : le flux temps réel est généré à partir du référentiel de test (ADR 0011). Pour les données réelles, ajoutez votre clé PRIM ([voir plus bas](#la-clé-prim-optionnelle)).
 4. Dans le terminal de VS Code :
    ```bash
    pnpm db:migrate      # crée les tables
@@ -265,8 +265,9 @@ WEB_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_REALTIME_URL=ws://localhost:4100/ws
 
-# Flux temps réel : replay | prim (ADR 0005)
-FEED_SOURCE=replay
+# Flux temps réel : synthetic | replay | prim (ADR 0005, 0011)
+# synthetic : généré depuis les horaires du référentiel, sans clé
+FEED_SOURCE=synthetic
 FEED_INTERVAL=30s
 REPLAY_DIR=./fixtures/replay
 # prim : clé personnelle du portail PRIM d'IDFM (https://prim.iledefrance-mobilites.fr)
@@ -285,7 +286,7 @@ XLIVEMETRO_API_URL=http://localhost:4000
 SENTRY_DSN=
 ```
 
-- `FEED_SOURCE=replay` rejoue un flux enregistré : **aucune clé ni aucun compte n'est nécessaire pour contribuer**.
+- `FEED_SOURCE=synthetic` génère le temps réel à partir des horaires du référentiel : **aucune clé ni aucun compte n'est nécessaire pour contribuer**. `replay` rejoue des réponses PRIM enregistrées dans `REPLAY_DIR`.
 - Le dossier `.secrets/` et le fichier `.env` sont dans `.gitignore`.
 
 ### .gitattributes et .gitignore

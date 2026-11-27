@@ -1,6 +1,6 @@
 # 0005. Mode rejeu : contribuer sans clé PRIM
 
-- Statut : acceptée
+- Statut : acceptée, complétée par [ADR 0011](0011-rejeu-synthetique.md) (valeur par défaut : `FEED_SOURCE=synthetic`)
 - Date : 2026-11-26
 - Décideurs : Kuami (mainteneur)
 
