@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type Station } from '@/lib/api';
 import type { Favorite } from '@/lib/favorites';
 import LineBadge from './LineBadge';
+import Logo from './Logo';
 
 /** Recherche de gare (Ctrl+K), favoris quand le champ est vide (F5, F8). */
 export default function SearchBox({
@@ -57,37 +58,46 @@ export default function SearchBox({
   const showFavorites = short && favorites.length > 0;
 
   return (
-    <div className="absolute top-3 left-3 z-20 w-[min(24rem,calc(100vw-5rem))]">
-      <label htmlFor="recherche" className="sr-only">
-        Rechercher une gare
-      </label>
-      <input
-        id="recherche"
-        ref={input}
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && shown[0]) choose(shown[0].id);
-          if (e.key === 'Escape') input.current?.blur();
-        }}
-        placeholder="Rechercher une gare (Ctrl+K)"
-        autoComplete="off"
-        className="w-full rounded-lg bg-neutral-900/95 px-3 py-2 text-sm text-neutral-100 shadow-xl outline-none placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-400"
-      />
+    <div className="relative w-full sm:w-[380px]">
+      <div className="flex h-12 items-center gap-2.5 rounded-xl border border-border bg-overlay pr-2 pl-2.5 backdrop-blur focus-within:outline-2 focus-within:outline-accent">
+        <Logo />
+        <label htmlFor="recherche" className="sr-only">
+          Rechercher une gare
+        </label>
+        <input
+          id="recherche"
+          ref={input}
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && shown[0]) choose(shown[0].id);
+            if (e.key === 'Escape') input.current?.blur();
+          }}
+          placeholder="Rechercher une gare"
+          autoComplete="off"
+          className="h-9 min-w-0 flex-1 bg-transparent text-[15px] text-text outline-none placeholder:text-muted"
+        />
+        <kbd className="hidden rounded-md border border-border px-1.5 py-0.5 font-mono text-xs text-muted sm:inline">
+          Ctrl K
+        </kbd>
+      </div>
       {open && (shown.length > 0 || showFavorites) && (
-        <ul className="mt-1 overflow-hidden rounded-lg bg-neutral-900/95 text-sm text-neutral-100 shadow-xl">
+        <ul className="absolute inset-x-0 top-[52px] z-30 overflow-hidden rounded-xl border border-border bg-surface p-1.5 text-text shadow-2xl">
           {showFavorites &&
             favorites.map((f) => (
               <li key={f.id}>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left hover:bg-neutral-700"
+                  className="flex h-11 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm hover:bg-surface-2"
                   onMouseDown={() => choose(f.id)}
                 >
-                  ★ {f.name}
+                  <span aria-hidden="true" className="text-accent">
+                    ★
+                  </span>
+                  {f.name}
                 </button>
               </li>
             ))}
@@ -95,13 +105,13 @@ export default function SearchBox({
             <li key={s.id}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-neutral-700"
+                className="flex h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-left hover:bg-surface-2"
                 onMouseDown={() => choose(s.id)}
               >
-                <span className="flex-1 truncate">{s.name}</span>
+                <span className="flex-1 truncate text-[15px]">{s.name}</span>
                 <span className="flex gap-1">
                   {s.lines.map((l) => (
-                    <LineBadge key={l.id} line={l} />
+                    <LineBadge key={l.id} line={l} size={24} />
                   ))}
                 </span>
               </button>

@@ -47,7 +47,7 @@ Les commandes `sudo` et toute saisie de mot de passe, code 2FA ou jeton : propos
 | Stack et structure du monorepo              | `docs/02-STACK.md`         |
 | Backend : service Go, API NestJS, MCP       | `docs/03-BACKEND.md`       |
 | Frontend : carte, couches, performances     | `docs/04-FRONTEND.md`      |
-| Système de design (à créer)                 | `DESIGN.md`                |
+| Système de design (jetons, carte, trains)   | `DESIGN.md`                |
 | Base de données : référentiel GTFS, PostGIS | `docs/05-DATABASE.md`      |
 | Dev container, compose, .env                | `docs/06-ENVIRONNEMENT.md` |
 | Branches, qualité, CI, revue                | `docs/07-COLLABORATION.md` |

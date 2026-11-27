@@ -38,14 +38,29 @@ export class ReferentialRepository {
       FROM routes ORDER BY mode, sort_order, short_name`;
   }
 
-  /** Tracés simplifiés (~5 m) de chaque ligne : toutes ses variantes en une MultiLineString. */
+  /**
+   * Tracés simplifiés (~5 m) de chaque ligne. Une variante entièrement recouverte (à 40 m près)
+   * par une variante plus longue de la même ligne est écartée : moins de traits parallèles.
+   */
   async lineShapes(): Promise<LineShape[]> {
     const rows = await this.prisma.client.$queryRaw<{ id: string; geojson: string }[]>`
-      SELECT u.route_id AS id,
-             ST_AsGeoJSON(ST_Simplify(ST_Collect(s.geom::geometry), 0.00005), 5) AS geojson
-      FROM (SELECT DISTINCT route_id, shape_id FROM trips) u
-      JOIN shapes s ON s.id = u.shape_id
-      GROUP BY u.route_id`;
+      WITH v AS (
+        SELECT DISTINCT u.route_id, s.id, s.geom, s.length_m
+        FROM (SELECT DISTINCT route_id, shape_id FROM trips) u
+        JOIN shapes s ON s.id = u.shape_id
+      ),
+      kept AS (
+        SELECT a.route_id, a.geom FROM v a
+        WHERE NOT EXISTS (
+          SELECT 1 FROM v b
+          WHERE b.route_id = a.route_id
+            AND (b.length_m > a.length_m OR (b.length_m = a.length_m AND b.id < a.id))
+            AND ST_CoveredBy(a.geom::geometry, ST_Buffer(b.geom, 40)::geometry)
+        )
+      )
+      SELECT route_id AS id,
+             ST_AsGeoJSON(ST_Simplify(ST_Collect(geom::geometry), 0.00005), 5) AS geojson
+      FROM kept GROUP BY route_id`;
     return rows.map((r) => ({ id: r.id, geometry: JSON.parse(r.geojson) as unknown }));
   }
 
