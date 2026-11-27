@@ -33,3 +33,20 @@ export function optionalMode(value: unknown): Mode | undefined {
   }
   throw new BadRequestException('mode invalide');
 }
+
+/** Gares de départ ou d'arrivée avec un temps de marche : « IDFM:71673~240,IDFM:… » (5 au plus). */
+export function stationPoints(value: unknown): { id: string; walkSec: number }[] {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 400) {
+    throw new BadRequestException('liste de gares invalide');
+  }
+  const parts = value.split(',');
+  if (parts.length > 5) throw new BadRequestException('5 gares au plus');
+  return parts.map((p) => {
+    const [id, sec = '0'] = p.split('~');
+    const walkSec = Number(sec);
+    if (!GTFS_ID.test(id) || !Number.isInteger(walkSec) || walkSec < 0 || walkSec > 3600) {
+      throw new BadRequestException('gare ou temps de marche invalide');
+    }
+    return { id, walkSec };
+  });
+}

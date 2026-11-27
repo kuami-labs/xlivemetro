@@ -1,7 +1,10 @@
 package gtfs
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"sort"
 	"strings"
 )
 
@@ -93,6 +96,13 @@ type Feed struct {
 	StopTimes     map[string][]StopTime // par course, triés par séquence
 	Calendars     []Calendar
 	CalendarDates []CalendarDate
+	Transfers     []Transfer
+}
+
+// Transfer est une correspondance à pied entre deux arrêts, avec sa durée minimale.
+type Transfer struct {
+	From, To string
+	MinSec   int
 }
 
 // Options restreint le chargement (jeu réduit des fixtures).
@@ -204,6 +214,9 @@ func Load(src Source, opt Options) (*Feed, error) {
 	if err := f.loadShapes(src, shapeIDs); err != nil {
 		return nil, err
 	}
+	if err := f.loadTransfers(src, stopIDs); err != nil {
+		return nil, err
+	}
 	if err := f.loadCalendars(src, serviceIDs); err != nil {
 		return nil, err
 	}
@@ -283,9 +296,15 @@ func (f *Feed) loadStops(src Source, used map[string]bool) error {
 			}
 		}
 	}
+	// Ordre stable (une map Go n'en a pas)
+	ids := make([]string, 0, len(keep))
+	for id := range keep {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
 	// Les gares d'abord : la clé étrangère parent_id doit exister à l'import
 	for _, pass := range []bool{true, false} {
-		for id := range keep {
+		for _, id := range ids {
 			s := all[id]
 			if (s.LocationType == 1) != pass {
 				continue
@@ -363,6 +382,26 @@ func (f *Feed) loadCalendars(src Source, used map[string]bool) error {
 		}
 		return nil
 	})
+}
+
+// loadTransfers garde les correspondances entre arrêts desservis (fichier optionnel).
+func (f *Feed) loadTransfers(src Source, used map[string]bool) error {
+	err := eachRow(src, "transfers.txt", func(c func(string) string) error {
+		from, to := c("from_stop_id"), c("to_stop_id")
+		if from == to || !used[from] || !used[to] {
+			return nil
+		}
+		// transfer_type 3 : correspondance impossible
+		if c("transfer_type") == "3" {
+			return nil
+		}
+		f.Transfers = append(f.Transfers, Transfer{From: from, To: to, MinSec: atoi(c("min_transfer_time"))})
+		return nil
+	})
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
 }
 
 // computeDistances trie les passages et projette chaque arrêt sur le tracé de sa course.

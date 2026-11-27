@@ -70,6 +70,8 @@ model Stop {
   stopTimes    StopTime[]
 
   @@index([parentId])
+  // Index spatial créé par la migration init : déclaré ici pour que Prisma ne le supprime pas
+  @@index([geom], map: "stops_geom_idx", type: Gist)
   @@map("stops")
 }
 
@@ -79,6 +81,7 @@ model Shape {
   lengthM Float                                      @map("length_m")
   trips   Trip[]
 
+  @@index([geom], map: "shapes_geom_idx", type: Gist)
   @@map("shapes")
 }
 
@@ -138,4 +141,15 @@ model CalendarDate {
 
   @@id([serviceId, date])
   @@map("calendar_dates")
+}
+
+/// Correspondance à pied entre deux arrêts desservis (transfers.txt d'IDFM), pour le moteur
+/// d'itinéraire (ADR 0018).
+model Transfer {
+  fromStopId String @map("from_stop_id")
+  toStopId   String @map("to_stop_id")
+  minSec     Int    @map("min_sec")
+
+  @@id([fromStopId, toStopId])
+  @@map("transfers")
 }

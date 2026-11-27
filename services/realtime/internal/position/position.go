@@ -282,3 +282,16 @@ func (e *Engine) Calls(key string, now time.Time) ([]Departure, bool) {
 	}
 	return nil, false
 }
+
+// TripTimes renvoie les horaires d'arrivée et de départ d'une course, estimés s'ils sont
+// connus et récents, théoriques sinon (pour le moteur d'itinéraire, ADR 0018).
+func (e *Engine) TripTimes(t *ref.Trip, now time.Time) (arr, dep []int64, theoretical bool) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	tm, ok := e.rt[t.Key]
+	if !ok || now.Sub(tm.seen) > e.TTL {
+		tm = theoreticalTimes(t)
+		return tm.arr, tm.dep, true
+	}
+	return tm.arr, tm.dep, false
+}

@@ -1,0 +1,4 @@
+from_stop_id,to_stop_id,transfer_type,min_transfer_time
+IDFM:2,IDFM:3,2,180
+IDFM:2,IDFM:9,2,60
+IDFM:1,IDFM:1,2,0

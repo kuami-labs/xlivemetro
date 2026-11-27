@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 )
 
@@ -40,7 +41,14 @@ func (f *Feed) WriteDir(dir string) error {
 		}
 	}
 	add("shapes.txt", "shape_id", "shape_pt_lat", "shape_pt_lon", "shape_pt_sequence")
-	for id, line := range f.Shapes {
+	// Ordre stable (une map Go n'en a pas) : fichiers identiques d'une génération à l'autre
+	ids := make([]string, 0, len(f.Shapes))
+	for id := range f.Shapes {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		line := f.Shapes[id]
 		for i, p := range line.Points {
 			add("shapes.txt", id, ff(p.Lat, 'f', -1, 64), ff(p.Lon, 'f', -1, 64), strconv.Itoa(i+1))
 		}
@@ -48,6 +56,10 @@ func (f *Feed) WriteDir(dir string) error {
 	add("calendar.txt", "service_id", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "start_date", "end_date")
 	add("calendar.txt", "JOUR_TYPE", "1", "1", "1", "1", "1", "1", "1", "20200101", "20991231")
 	add("calendar_dates.txt", "service_id", "date", "exception_type")
+	add("transfers.txt", "from_stop_id", "to_stop_id", "transfer_type", "min_transfer_time")
+	for _, t := range f.Transfers {
+		add("transfers.txt", t.From, t.To, "2", strconv.Itoa(t.MinSec))
+	}
 
 	for name, rows := range files {
 		out, err := os.Create(filepath.Join(dir, name))

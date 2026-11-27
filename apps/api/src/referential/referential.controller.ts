@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Param, Query } from '@nestjs/common';
-import { gtfsId, optionalMode, searchQuery, tripKey } from '../common/validation.js';
+import { BadRequestException } from '@nestjs/common';
+import { gtfsId, optionalMode, searchQuery, stationPoints, tripKey } from '../common/validation.js';
 import { ReferentialService } from './referential.service.js';
 
 const CACHE_LONG = 'public, max-age=3600';
@@ -56,6 +57,18 @@ export class ReferentialController {
   @Header('Cache-Control', 'public, max-age=30')
   disruptions(@Query('line') line?: string) {
     return this.service.disruptions(line ? gtfsId(line) : undefined);
+  }
+
+  /** Itinéraires : ?from=IDFM:71673~240&to=IDFM:71517[&at=<secondes Unix>] (F12, F13) */
+  @Get('journeys')
+  @Header('Cache-Control', 'no-store')
+  journeys(@Query('from') from?: string, @Query('to') to?: string, @Query('at') at?: string) {
+    let when: number | undefined;
+    if (at !== undefined) {
+      when = Number(at);
+      if (!Number.isInteger(when)) throw new BadRequestException('paramètre at invalide');
+    }
+    return this.service.journeys(stationPoints(from), stationPoints(to), when);
   }
 
   @Get('trips/:id')
