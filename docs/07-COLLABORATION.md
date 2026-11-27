@@ -11,7 +11,7 @@ Ce document décrit donc deux modes. Le **mode solo** est actif. Le **mode équi
 
 | Sujet                                                          | Mode solo (actuel)                                | Mode équipe                                       |
 | -------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| Équipes                                                        | `xlivemetro-maintainers` seule                      | + `xlivemetro-core`, `xlivemetro-triage`              |
+| Équipes                                                        | `xlivemetro-maintainers` seule                    | + `xlivemetro-core`, `xlivemetro-triage`          |
 | Pull request obligatoire                                       | **oui**                                           | oui                                               |
 | Approbation obligatoire                                        | non                                               | 1 approbation                                     |
 | Revue des Code Owners                                          | non (fichier `CODEOWNERS` présent mais non exigé) | oui                                               |
@@ -50,12 +50,12 @@ L'organisation **`kuami-labs`** est neutre : elle héberge XLiveMetro et les pro
 
 Principe : **le moins de droits possible**, on élargit à la demande et après contributions régulières.
 
-| Équipe                 | Rôle sur le dépôt | Peut                                       | Pour qui                                  |
-| ---------------------- | ----------------- | ------------------------------------------ | ----------------------------------------- |
+| Équipe                   | Rôle sur le dépôt | Peut                                       | Pour qui                                  |
+| ------------------------ | ----------------- | ------------------------------------------ | ----------------------------------------- |
 | `xlivemetro-maintainers` | Admin             | tout, dont les règles et les releases      | 1 à 2 personnes                           |
 | `xlivemetro-core`        | Write             | pousser des branches, fusionner des PR     | contributeurs réguliers et de confiance   |
 | `xlivemetro-triage`      | Triage            | trier les issues, poser des labels, relire | contributeurs qui aident à l'organisation |
-| Tout le monde          | Read (public)     | forker, ouvrir des issues et des PR        | contributeurs externes                    |
+| Tout le monde            | Read (public)     | forker, ouvrir des issues et des PR        | contributeurs externes                    |
 
 > **Mode solo** : seule `xlivemetro-maintainers` est créée, avec vous comme unique membre. `xlivemetro-core` et `xlivemetro-triage` sont créées au passage en mode équipe.
 
@@ -145,15 +145,15 @@ pnpm-lock.yaml             @kuami-labs/xlivemetro-maintainers
 
 ### Types et labels
 
-| Label                                                          | Sens                                                               |
-| -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `good first issue`                                             | petite tâche, bien décrite, idéale pour un premier contributeur    |
-| `help wanted`                                                  | les mainteneurs cherchent quelqu'un pour la prendre                |
+| Label                                                                        | Sens                                                               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `good first issue`                                                           | petite tâche, bien décrite, idéale pour un premier contributeur    |
+| `help wanted`                                                                | les mainteneurs cherchent quelqu'un pour la prendre                |
 | `area:realtime`, `area:api`, `area:web`, `area:mcp`, `area:db`, `area:infra` | partie du code concernée                                           |
-| `priority:high`, `priority:low`                                | urgence                                                            |
-| `needs-triage`                                                 | pas encore examinée (posé automatiquement)                         |
-| `blocked`                                                      | attend une décision ou une autre tâche                             |
-| `fichier-protege`                                              | demande de changement d'un fichier protégé : un mainteneur le fera |
+| `priority:high`, `priority:low`                                              | urgence                                                            |
+| `needs-triage`                                                               | pas encore examinée (posé automatiquement)                         |
+| `blocked`                                                                    | attend une décision ou une autre tâche                             |
+| `fichier-protege`                                                            | demande de changement d'un fichier protégé : un mainteneur le fera |
 
 ### Règle de travail
 
@@ -170,7 +170,7 @@ Messages au format [Conventional Commits](https://www.conventionalcommits.org/fr
 | Préfixe     | Usage                           | Exemple                                                |
 | ----------- | ------------------------------- | ------------------------------------------------------ |
 | `feat:`     | nouvelle fonctionnalité         | `feat(web): filtre par période sur le tableau de bord` |
-| `fix:`      | correction de bug               | `fix(realtime): ignorer les courses annulées`             |
+| `fix:`      | correction de bug               | `fix(realtime): ignorer les courses annulées`          |
 | `docs:`     | documentation                   | `docs: étape WSL dans l'environnement`                 |
 | `refactor:` | sans changement de comportement | `refactor(api): extraire le guard d'organisation`      |
 | `test:`     | tests seuls                     | `test(position): course au terminus`                   |
@@ -345,13 +345,13 @@ Activez aussi **Settings** → **Code security** : Dependabot alerts, Secret sca
 
 **Mode équipe** :
 
-| Qui relit                                              | Quoi vérifier                                          |
-| ------------------------------------------------------ | ------------------------------------------------------ |
+| Qui relit                                                  | Quoi vérifier                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
 | Un membre de `xlivemetro-core` ou `xlivemetro-maintainers` | la PR répond à l'issue, rien de plus                   |
-|                                                        | les tests couvrent le nouveau comportement             |
-|                                                        | aucun secret, aucune donnée personnelle ajoutée        |
-|                                                        | le code produit avec une IA est compris par son auteur |
-|                                                        | la doc est à jour si le comportement change            |
+|                                                            | les tests couvrent le nouveau comportement             |
+|                                                            | aucun secret, aucune donnée personnelle ajoutée        |
+|                                                            | le code produit avec une IA est compris par son auteur |
+|                                                            | la doc est à jour si le comportement change            |
 
 - Délai cible : **première réponse sous 5 jours ouvrés** (contributions externes, dans les deux modes : dès que possible).
 - Un commentaire préfixé `nit:` est une suggestion mineure, non bloquante.
@@ -436,13 +436,13 @@ Pour **revenir en mode solo** (départ du seul autre contributeur), faites l'inv
 
 ## Fichiers communautaires
 
-| Fichier                            | Rôle                                            |
-| ---------------------------------- | ----------------------------------------------- |
+| Fichier                            | Rôle                                              |
+| ---------------------------------- | ------------------------------------------------- |
 | `README.md`                        | ce que fait XLiveMetro, capture, démarrage rapide |
-| `LICENSE`                          | licence open source AGPL-3.0                    |
-| `CONTRIBUTING.md`                  | comment contribuer, pas à pas                   |
-| `CODE_OF_CONDUCT.md`               | règles de comportement                          |
-| `SECURITY.md`                      | signaler une faille en privé                    |
-| `docs/08-SECURITE.md`              | règles de sécurité du projet                    |
-| `.github/ISSUE_TEMPLATE/`          | modèles de bug et de demande de fonctionnalité  |
-| `.github/pull_request_template.md` | modèle de PR                                    |
+| `LICENSE`                          | licence open source AGPL-3.0                      |
+| `CONTRIBUTING.md`                  | comment contribuer, pas à pas                     |
+| `CODE_OF_CONDUCT.md`               | règles de comportement                            |
+| `SECURITY.md`                      | signaler une faille en privé                      |
+| `docs/08-SECURITE.md`              | règles de sécurité du projet                      |
+| `.github/ISSUE_TEMPLATE/`          | modèles de bug et de demande de fonctionnalité    |
+| `.github/pull_request_template.md` | modèle de PR                                      |

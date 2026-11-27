@@ -8,11 +8,6 @@
       "Read(./db/data/**)",
       "Read(./fixtures/replay/**/*.key)"
     ],
-    "ask": [
-      "Bash(gh api:*)",
-      "Bash(gh repo:*)",
-      "Bash(git push:*)",
-      "Bash(docker system prune:*)"
-    ]
+    "ask": ["Bash(gh api:*)", "Bash(gh repo:*)", "Bash(git push:*)", "Bash(docker system prune:*)"]
   }
 }

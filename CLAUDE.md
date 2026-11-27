@@ -41,18 +41,18 @@ Les commandes `sudo` et toute saisie de mot de passe, code 2FA ou jeton : propos
 
 ## Documents de référence (à lire selon la tâche)
 
-| Sujet                                          | Fichier                    |
-| ---------------------------------------------- | -------------------------- |
-| Produit, fonctionnalités, plan                 | `docs/01-PRD.md`           |
-| Stack et structure du monorepo                 | `docs/02-STACK.md`         |
-| Backend : service Go, API NestJS, MCP          | `docs/03-BACKEND.md`       |
-| Frontend : carte, couches, performances        | `docs/04-FRONTEND.md`      |
-| Système de design (à créer)                    | `DESIGN.md`                |
-| Base de données : référentiel GTFS, PostGIS    | `docs/05-DATABASE.md`      |
-| Dev container, compose, .env                   | `docs/06-ENVIRONNEMENT.md` |
-| Branches, qualité, CI, revue                   | `docs/07-COLLABORATION.md` |
-| Sécurité, injection de prompts                 | `docs/08-SECURITE.md`      |
-| Décisions d'architecture                       | `docs/adr/`                |
+| Sujet                                       | Fichier                    |
+| ------------------------------------------- | -------------------------- |
+| Produit, fonctionnalités, plan              | `docs/01-PRD.md`           |
+| Stack et structure du monorepo              | `docs/02-STACK.md`         |
+| Backend : service Go, API NestJS, MCP       | `docs/03-BACKEND.md`       |
+| Frontend : carte, couches, performances     | `docs/04-FRONTEND.md`      |
+| Système de design (à créer)                 | `DESIGN.md`                |
+| Base de données : référentiel GTFS, PostGIS | `docs/05-DATABASE.md`      |
+| Dev container, compose, .env                | `docs/06-ENVIRONNEMENT.md` |
+| Branches, qualité, CI, revue                | `docs/07-COLLABORATION.md` |
+| Sécurité, injection de prompts              | `docs/08-SECURITE.md`      |
+| Décisions d'architecture                    | `docs/adr/`                |
 
 Ces documents font foi. En cas de contradiction entre eux ou avec une demande, **demande avant d'agir**.
 

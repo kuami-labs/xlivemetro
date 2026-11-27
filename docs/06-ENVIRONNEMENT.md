@@ -16,17 +16,17 @@ L'environnement est **du code**, versionné avec le projet. Un contributeur n'in
 
 ## Parité dev / prod
 
-|                      | Dev                             | Prod                                |
-| -------------------- | ------------------------------- | ----------------------------------- |
-| Système              | Debian trixie                   | Debian trixie                       |
-| Node (LTS)           | 26                              | 26                                  |
-| Go                   | 1.27                            | 1.27                                |
-| PostgreSQL + PostGIS | 19 / 3.7                        | 19 / 3.7                            |
-| Redis                | 8                               | 8                                   |
-| Configuration        | fichier `.env` local            | variables d'environnement (Coolify) |
-| Flux temps réel      | rejeu enregistré (`FEED_SOURCE=replay`) ou votre clé PRIM | PRIM, clé de l'instance |
-| Données              | référentiel réduit (`pnpm db:seed`) | GTFS IDFM complet (`pnpm gtfs:import`) |
-| Rechargement à chaud | oui                             | non                                 |
+|                      | Dev                                                       | Prod                                   |
+| -------------------- | --------------------------------------------------------- | -------------------------------------- |
+| Système              | Debian trixie                                             | Debian trixie                          |
+| Node (LTS)           | 26                                                        | 26                                     |
+| Go                   | 1.27                                                      | 1.27                                   |
+| PostgreSQL + PostGIS | 19 / 3.7                                                  | 19 / 3.7                               |
+| Redis                | 8                                                         | 8                                      |
+| Configuration        | fichier `.env` local                                      | variables d'environnement (Coolify)    |
+| Flux temps réel      | rejeu enregistré (`FEED_SOURCE=replay`) ou votre clé PRIM | PRIM, clé de l'instance                |
+| Données              | référentiel réduit (`pnpm db:seed`)                       | GTFS IDFM complet (`pnpm gtfs:import`) |
+| Rechargement à chaud | oui                                                       | non                                    |
 
 Les six premières lignes sont **identiques**. Les autres diffèrent **exprès**.
 
@@ -206,7 +206,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-
 ```
 
 - **Le nom du service est le nom d'hôte** : depuis `dev`, la base est `db:5432`, Redis `redis:6379`.
@@ -331,12 +330,12 @@ Enregistrer un jeu de rejeu : `pnpm --filter realtime record -- --duration 1h` (
 
 ## Accéder aux services
 
-| Service    | Depuis le conteneur     | Depuis votre machine                                           |
-| ---------- | ----------------------- | -------------------------------------------------------------- |
-| Web        | `http://localhost:3000` | `http://localhost:3000`                                        |
-| API        | `http://localhost:4000` | `http://localhost:4000`                                        |
+| Service    | Depuis le conteneur     | Depuis votre machine                                               |
+| ---------- | ----------------------- | ------------------------------------------------------------------ |
+| Web        | `http://localhost:3000` | `http://localhost:3000`                                            |
+| API        | `http://localhost:4000` | `http://localhost:4000`                                            |
 | PostgreSQL | `psql $DATABASE_URL`    | TablePlus, DBeaver : `127.0.0.1:5432`, `xlivemetro` / `xlivemetro` |
-| Realtime   | `http://localhost:4100` | `http://localhost:4100` (WebSocket : `/ws`)                    |
+| Realtime   | `http://localhost:4100` | `http://localhost:4100` (WebSocket : `/ws`)                        |
 
 Web, API et realtime sont publiés sur `127.0.0.1` par `compose.yaml` : ils sont joignables depuis le navigateur même sans VS Code (Claude Desktop en session WSL). Si un port est déjà pris sur votre machine, changez le port de gauche dans `compose.yaml`.
 
@@ -358,7 +357,7 @@ Le projet utilise **pnpm** exclusivement, jamais npm ni yarn.
 | --------------------------------- | --------------------------------------------------- |
 | `npm install`                     | `pnpm install`                                      |
 | `npm install -D paquet` (racine)  | `pnpm add -D -w paquet`                             |
-| `npm install paquet` dans une app | `pnpm --filter @xlivemetro/api add paquet`            |
+| `npm install paquet` dans une app | `pnpm --filter @xlivemetro/api add paquet`          |
 | `npm run script`                  | `pnpm script`                                       |
 | `npx outil`                       | `pnpm dlx outil` (ou `pnpm exec` s'il est installé) |
 | `npm ci`                          | `pnpm install --frozen-lockfile`                    |
@@ -377,17 +376,17 @@ Ainsi, le Node, pnpm et `psql` utilisés sont toujours ceux du conteneur.
 
 ## Commandes utiles
 
-| Commande                                        | Effet                                              |
-| ----------------------------------------------- | -------------------------------------------------- |
-| `pnpm dev`                                      | lance realtime, api et web avec rechargement à chaud |
-| `pnpm gtfs:import`                              | importe le référentiel GTFS IDFM complet           |
-| `pnpm build`                                    | compile tout, comme la CI                          |
-| `pnpm test`                                     | tests unitaires et d'intégration                   |
-| `pnpm lint` / `pnpm format`                     | ESLint / Prettier                                  |
-| `pnpm db:migrate`                               | applique les migrations Prisma                     |
-| `pnpm db:seed`                                  | charge le référentiel réduit des fixtures          |
-| `pnpm db:reset`                                 | vide la base, rejoue migrations et seed            |
-| `pnpm --filter @xlivemetro/db exec prisma studio` | interface Prisma Studio                            |
+| Commande                                          | Effet                                                |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| `pnpm dev`                                        | lance realtime, api et web avec rechargement à chaud |
+| `pnpm gtfs:import`                                | importe le référentiel GTFS IDFM complet             |
+| `pnpm build`                                      | compile tout, comme la CI                            |
+| `pnpm test`                                       | tests unitaires et d'intégration                     |
+| `pnpm lint` / `pnpm format`                       | ESLint / Prettier                                    |
+| `pnpm db:migrate`                                 | applique les migrations Prisma                       |
+| `pnpm db:seed`                                    | charge le référentiel réduit des fixtures            |
+| `pnpm db:reset`                                   | vide la base, rejoue migrations et seed              |
+| `pnpm --filter @xlivemetro/db exec prisma studio` | interface Prisma Studio                              |
 
 ## Vérifier l'environnement
 
@@ -429,5 +428,5 @@ curl http://localhost:4100/health   # {"status":"ok","source":"replay","last_cyc
 | Conteneurs en conflit           | supprimez-les dans Docker Desktop, puis **Rebuild Container**                                               |
 | `Author identity unknown`       | configurez git sur votre machine, puis **Rebuild Container**                                                |
 | `Permission denied (publickey)` | sur votre machine, `ssh-add -l` doit lister votre clé ; sinon `ssh-add`                                     |
-| Carte sans véhicules            | `curl localhost:4100/health` : source, âge du dernier cycle ; en `prim`, vérifiez la clé et les quotas       |
+| Carte sans véhicules            | `curl localhost:4100/health` : source, âge du dernier cycle ; en `prim`, vérifiez la clé et les quotas      |
 | Tout est cassé                  | `docker system prune -a --volumes` (supprime **toutes** les données Docker locales), puis redémarrez Docker |

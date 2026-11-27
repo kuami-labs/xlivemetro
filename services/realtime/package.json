@@ -1,0 +1,12 @@
+{
+  "name": "@xlivemetro/realtime",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "sh -c 'if [ -f ../../.env ]; then set -a; . ../../.env; set +a; fi; exec go run ./cmd/realtime'",
+    "build": "go build -o dist/realtime ./cmd/realtime",
+    "lint": "go vet ./... && test -z \"$(gofmt -l .)\"",
+    "test": "go test -race ./..."
+  }
+}

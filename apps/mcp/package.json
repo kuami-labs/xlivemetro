@@ -1,0 +1,18 @@
+{
+  "name": "@kuami-labs/xlivemetro-mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Serveur MCP de XLiveMetro : état du réseau ferré d'Île-de-France et liens vers la carte",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "xlivemetro-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  }
+}

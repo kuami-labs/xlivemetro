@@ -4,24 +4,24 @@
 
 ## Pages
 
-| Route | Contenu |
-| --- | --- |
-| `/` | la carte plein écran ; paramètres d'URL : `stop`, `line`, `follow`, `mode`, `lat`, `lng`, `zoom`, `pitch`, `bearing` |
-| `/lignes` | liste des lignes et leur état (rendu serveur, utile au référencement) |
-| `/a-propos` | sources, licences IDFM et OSM, fonctionnement des positions estimées, MCP |
+| Route       | Contenu                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/`         | la carte plein écran ; paramètres d'URL : `stop`, `line`, `follow`, `mode`, `lat`, `lng`, `zoom`, `pitch`, `bearing` |
+| `/lignes`   | liste des lignes et leur état (rendu serveur, utile au référencement)                                                |
+| `/a-propos` | sources, licences IDFM et OSM, fonctionnement des positions estimées, MCP                                            |
 
 Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'outil `map_link` du MCP.
 
 ## Couches de la carte
 
-| Couche | Technologie | Contenu |
-| --- | --- | --- |
-| Fond + bâtiments 3D | MapLibre (style vectoriel, `fill-extrusion`) | thème sombre par défaut, clair en option |
-| Tracés des lignes | deck.gl `PathLayer` | couleurs officielles, lignes perturbées en pointillés |
-| Gares | deck.gl `ScatterplotLayer` + `TextLayer` | taille selon le zoom |
-| Véhicules | deck.gl `ScenegraphLayer` (modèle 3D léger) ou `IconLayer` selon le zoom | couleur du retard, cap |
-| Traînées | deck.gl `TripsLayer` | sillage des 60 dernières secondes |
-| Chaleur des retards (F10) | deck.gl `HeatmapLayer` | |
+| Couche                    | Technologie                                                              | Contenu                                               |
+| ------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Fond + bâtiments 3D       | MapLibre (style vectoriel, `fill-extrusion`)                             | thème sombre par défaut, clair en option              |
+| Tracés des lignes         | deck.gl `PathLayer`                                                      | couleurs officielles, lignes perturbées en pointillés |
+| Gares                     | deck.gl `ScatterplotLayer` + `TextLayer`                                 | taille selon le zoom                                  |
+| Véhicules                 | deck.gl `ScenegraphLayer` (modèle 3D léger) ou `IconLayer` selon le zoom | couleur du retard, cap                                |
+| Traînées                  | deck.gl `TripsLayer`                                                     | sillage des 60 dernières secondes                     |
+| Chaleur des retards (F10) | deck.gl `HeatmapLayer`                                                   |                                                       |
 
 ## Performances (le cœur du projet)
 
@@ -35,16 +35,16 @@ Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'o
 
 ## Composants
 
-| Composant | Rôle |
-| --- | --- |
-| `LiveMap` | instancie MapLibre + `MapboxOverlay` deck.gl, gère la caméra |
-| `RealtimeClient` | WebSocket, reconnexion avec back-off, Web Worker de décodage |
-| `StopPanel` | fiche d'une gare : prochains passages (TanStack Query, rafraîchi 30 s) |
-| `VehiclePanel` | fiche d'un train suivi |
-| `LineFilter`, `SearchBox` | filtres et recherche (Ctrl+K) |
-| `DisruptionBadge` | état d'une ligne, message en texte brut |
-| `FreshnessIndicator` | âge des données, « estimé » / « théorique » |
-| `Attribution` | mentions IDFM, OSM, tuiles |
+| Composant                 | Rôle                                                                   |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `LiveMap`                 | instancie MapLibre + `MapboxOverlay` deck.gl, gère la caméra           |
+| `RealtimeClient`          | WebSocket, reconnexion avec back-off, Web Worker de décodage           |
+| `StopPanel`               | fiche d'une gare : prochains passages (TanStack Query, rafraîchi 30 s) |
+| `VehiclePanel`            | fiche d'un train suivi                                                 |
+| `LineFilter`, `SearchBox` | filtres et recherche (Ctrl+K)                                          |
+| `DisruptionBadge`         | état d'une ligne, message en texte brut                                |
+| `FreshnessIndicator`      | âge des données, « estimé » / « théorique »                            |
+| `Attribution`             | mentions IDFM, OSM, tuiles                                             |
 
 ## Accessibilité
 

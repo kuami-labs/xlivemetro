@@ -1,0 +1,42 @@
+{
+  "name": "xlivemetro",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "prepare": "husky",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "eslint --flag v10_config_lookup_from_file . && turbo run lint",
+    "format": "prettier --write . '!db/data'",
+    "format:check": "prettier --check . '!db/data'",
+    "db:migrate": "pnpm --filter @xlivemetro/db migrate",
+    "db:seed": "pnpm --filter @xlivemetro/db seed",
+    "db:reset": "pnpm --filter @xlivemetro/db reset",
+    "gtfs:import": "pnpm --filter @xlivemetro/db gtfs:import"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "eslint --flag v10_config_lookup_from_file --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": "prettier --write",
+    "*.go": "gofmt -w"
+  },
+  "packageManager": "pnpm@12.23.0",
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^26.6.10",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.2",
+    "prettier": "^3.10.1",
+    "turbo": "^2.11.13",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^5.1.2"
+  }
+}
