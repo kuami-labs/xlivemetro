@@ -102,17 +102,18 @@ Certains fichiers changent les règles du projet pour tout le monde : environnem
 
 ## Sécurité de l'application
 
-| Risque                 | Règle                                                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Fuite de la clé PRIM   | appels PRIM uniquement dans `realtime` ; jamais renvoyée au client ni journalisée                                  |
-| Épuisement des quotas  | une seule ingestion (instance unique, ADR 0013), aucune route publique ne déclenche d'appel PRIM direct hors cache |
-| Saturation WebSocket   | connexions limitées par IP, taille de message `Subscribe` bornée, file d'envoi bornée par client                   |
-| Texte IDFM malveillant | perturbations affichées en texte brut, jamais en HTML ; échappement côté front                                     |
-| CORS et origine        | WebSocket : vérification de l'en-tête `Origin` ; API : CORS limité à `WEB_URL`                                     |
-| Entrées invalides      | validation de chaque DTO (`class-validator`) ; bbox et identifiants validés côté Go                                |
-| Abus                   | limitation de débit par IP sur l'API, le WebSocket et la recherche                                                 |
-| Données personnelles   | aucune : pas de compte, pas de cookie de suivi, IP tronquée dans les logs                                          |
-| Dépendance vulnérable  | Dependabot, `pnpm audit`                                                                                           |
+| Risque                 | Règle                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fuite de la clé PRIM   | appels PRIM uniquement dans `realtime` ; jamais renvoyée au client ni journalisée                                                                               |
+| Épuisement des quotas  | une seule ingestion (instance unique, ADR 0013), aucune route publique ne déclenche d'appel PRIM direct hors cache                                              |
+| Saturation WebSocket   | connexions limitées par IP, taille de message `Subscribe` bornée, file d'envoi bornée par client                                                                |
+| Texte IDFM malveillant | perturbations affichées en texte brut, jamais en HTML ; échappement côté front                                                                                  |
+| CORS et origine        | WebSocket : vérification de l'en-tête `Origin` ; API : CORS limité à `WEB_URL`                                                                                  |
+| Entrées invalides      | validation de chaque DTO (`class-validator`) ; bbox et identifiants validés côté Go                                                                             |
+| Abus                   | limitation de débit par IP sur l'API, le WebSocket et la recherche                                                                                              |
+| Données personnelles   | aucune conservée : pas de compte, pas de cookie de suivi, IP tronquée dans les logs                                                                             |
+| Position du visiteur   | jamais envoyée au serveur : gares proches calculées dans le navigateur, seuls des identifiants de gares transmis ; ni journalisée ni dans l'URL (PRD, ADR 0017) |
+| Dépendance vulnérable  | Dependabot, `pnpm audit`                                                                                                                                        |
 
 ### Le serveur MCP
 
