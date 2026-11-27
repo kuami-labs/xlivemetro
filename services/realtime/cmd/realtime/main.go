@@ -58,6 +58,7 @@ func run() error {
 	slog.Info("référentiel chargé", "lignes", len(f.Routes), "courses", len(f.Trips))
 
 	var src feed.Source
+	var msgs feed.Source = feed.NoMessages{}
 	switch name := env("FEED_SOURCE", "synthetic"); name {
 	case "synthetic":
 		src = feed.NewSynthetic(nil)
@@ -68,6 +69,7 @@ func run() error {
 			return errors.New("FEED_INTERVAL doit être d'au moins 30 s avec PRIM (quotas)")
 		}
 		src = feed.Prim{URL: env("PRIM_ET_URL", feed.DefaultPrimURL), APIKey: os.Getenv("PRIM_API_KEY")}
+		msgs = feed.Prim{URL: env("PRIM_GM_URL", feed.DefaultPrimMessagesURL), APIKey: os.Getenv("PRIM_API_KEY")}
 	default:
 		return fmt.Errorf("FEED_SOURCE inconnu : %q", name)
 	}
@@ -83,7 +85,8 @@ func run() error {
 	now := func() time.Time { return time.Now().Add(offset) }
 
 	h := hub.New(src.Name(), origins(env("WEB_URL", "http://localhost:3000")))
-	a := app.New(app.Config{FeedInterval: interval, Tick: 5 * time.Second}, f, src, h, now)
+	a := app.New(app.Config{FeedInterval: interval, Tick: 5 * time.Second, MessagesInterval: 2 * time.Minute}, f, src, h, now)
+	a.Messages = msgs
 	go a.Run(ctx)
 
 	srv := &http.Server{Addr: ":" + env("REALTIME_PORT", "4100"), Handler: a.Routes(), ReadHeaderTimeout: 5 * time.Second}

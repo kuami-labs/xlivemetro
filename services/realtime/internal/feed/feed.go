@@ -12,3 +12,15 @@ type Source interface {
 	Name() string
 	Fetch(ctx context.Context, now time.Time) ([]byte, error)
 }
+
+// NoMessages est la source de perturbations des flux synthétique et rejoué : aucune.
+// On n'invente pas de perturbation sur une carte publique.
+type NoMessages struct{}
+
+// Name implémente Source.
+func (NoMessages) Name() string { return "none" }
+
+// Fetch implémente Source : une réponse General Message vide.
+func (NoMessages) Fetch(context.Context, time.Time) ([]byte, error) {
+	return []byte(`{"Siri":{"ServiceDelivery":{"GeneralMessageDelivery":[]}}}`), nil
+}

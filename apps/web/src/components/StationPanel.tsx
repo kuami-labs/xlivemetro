@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, type Departure, type Station } from '@/lib/api';
+import { api, type Departure, type Disruption, type Station } from '@/lib/api';
 import { loadFavorites, toggleFavorite } from '@/lib/favorites';
 import { delayLabel, waitLabel } from '@/lib/format';
 import LineBadge from './LineBadge';
@@ -22,6 +22,7 @@ export default function StationPanel({
   const [error, setError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [favorite, setFavorite] = useState(false);
+  const [disruptions, setDisruptions] = useState<Disruption[]>([]);
 
   useEffect(() => {
     // Le parent remonte le composant à chaque gare (key) : pas d'état à réinitialiser
@@ -45,6 +46,10 @@ export default function StationPanel({
         () => active && setError(true),
       );
     void load();
+    api.disruptions().then(
+      (d) => active && setDisruptions(d),
+      () => {}, // perturbations indisponibles : la fiche reste utilisable
+    );
     const timer = setInterval(load, 30_000);
     return () => {
       active = false;
@@ -80,6 +85,24 @@ export default function StationPanel({
           {favorite ? '★ Retirer des favoris' : '☆ Ajouter aux favoris'}
         </button>
       )}
+      {disruptions
+        .filter((d) => d.lines.some((l) => station?.lines.some((sl) => sl.id === l.id)))
+        .map((d) => (
+          <div
+            key={d.id}
+            role="alert"
+            className="mb-3 rounded border border-orange-400/60 p-2 text-sm"
+          >
+            <div className="mb-1 flex gap-1">
+              {d.lines.map((l) => (
+                <LineBadge key={l.id} line={l} />
+              ))}
+              <span className="font-medium">{d.channel || 'Information'}</span>
+            </div>
+            {/* Texte IDFM affiché comme texte brut (React l'échappe), jamais comme HTML */}
+            <p>{d.text}</p>
+          </div>
+        ))}
       <h3 className="mb-2 text-sm font-medium text-neutral-400">Prochains départs</h3>
       {error && <p className="text-sm text-red-300">Départs indisponibles pour le moment.</p>}
       {!error && departures === null && <p className="text-sm text-neutral-400">Chargement…</p>}

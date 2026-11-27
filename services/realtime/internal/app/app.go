@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,8 +23,9 @@ import (
 
 // Config règle les cadences.
 type Config struct {
-	FeedInterval time.Duration // appel de la source (30 s minimum avec PRIM)
-	Tick         time.Duration // calcul et diffusion des positions
+	FeedInterval     time.Duration // appel de la source (30 s minimum avec PRIM)
+	Tick             time.Duration // calcul et diffusion des positions
+	MessagesInterval time.Duration // messages de perturbation (2 min)
 }
 
 // App est le service en fonctionnement.
@@ -31,15 +33,18 @@ type App struct {
 	cfg    Config
 	feed   *gtfs.Feed
 	source feed.Source
-	engine *position.Engine
-	Hub    *hub.Hub
-	now    func() time.Time
+	// Messages de perturbation (SIRI Lite General Message) ; nil = aucun
+	Messages feed.Source
+	engine   *position.Engine
+	Hub      *hub.Hub
+	now      func() time.Time
 
 	mu        sync.Mutex
 	day       string
 	lastCycle time.Time
 	lastErr   string
 	matched   int
+	disrupts  []siri.Disruption
 }
 
 // New prépare le service. Le flux synthétique suit automatiquement le référentiel du jour.
@@ -58,10 +63,17 @@ func dayOf(t time.Time) string { return t.In(ref.Paris).Format("2006-01-02") }
 func (a *App) Run(ctx context.Context) {
 	a.Cycle(ctx)
 	a.Tick()
+	a.Disruptions(ctx)
+	msgEvery := a.cfg.MessagesInterval
+	if msgEvery <= 0 {
+		msgEvery = 2 * time.Minute
+	}
 	feedT := time.NewTicker(a.cfg.FeedInterval)
 	tickT := time.NewTicker(a.cfg.Tick)
+	msgT := time.NewTicker(msgEvery)
 	defer feedT.Stop()
 	defer tickT.Stop()
+	defer msgT.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -70,6 +82,8 @@ func (a *App) Run(ctx context.Context) {
 			a.Cycle(ctx)
 		case <-tickT.C:
 			a.Tick()
+		case <-msgT.C:
+			a.Disruptions(ctx)
 		}
 	}
 }
@@ -100,6 +114,34 @@ func (a *App) Cycle(ctx context.Context) {
 	}
 	a.mu.Lock()
 	a.lastErr = err.Error()
+	a.mu.Unlock()
+}
+
+// Disruptions met à jour les messages de perturbation. En cas d'erreur, les derniers
+// messages connus sont gardés.
+func (a *App) Disruptions(ctx context.Context) {
+	if a.Messages == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	now := a.now()
+	b, err := a.Messages.Fetch(ctx, now)
+	if err != nil {
+		slog.Error("messages de perturbation", "err", err)
+		return
+	}
+	routes := map[string]bool{}
+	for _, r := range a.feed.Routes {
+		routes[r.ID] = true
+	}
+	ds, err := siri.DecodeMessages(b, now, func(id string) bool { return routes[id] })
+	if err != nil {
+		slog.Error("messages de perturbation", "err", err)
+		return
+	}
+	a.mu.Lock()
+	a.disrupts = ds
 	a.mu.Unlock()
 }
 
@@ -188,6 +230,19 @@ func (a *App) Routes() http.Handler {
 			set[id] = true
 		}
 		writeJSON(w, a.engine.Departures(set, a.now(), 90*time.Minute, limit))
+	})
+	// Perturbations en cours : GET /disruptions?line=IDFM:C01742 (pour l'API)
+	mux.HandleFunc("GET /disruptions", func(w http.ResponseWriter, r *http.Request) {
+		line := r.URL.Query().Get("line")
+		a.mu.Lock()
+		out := make([]siri.Disruption, 0, len(a.disrupts))
+		for _, d := range a.disrupts {
+			if line == "" || slices.Contains(d.LineIDs, line) {
+				out = append(out, d)
+			}
+		}
+		a.mu.Unlock()
+		writeJSON(w, out)
 	})
 	// Passages restants d'un train : GET /trips/{id}/calls
 	mux.HandleFunc("GET /trips/{id}/calls", func(w http.ResponseWriter, r *http.Request) {

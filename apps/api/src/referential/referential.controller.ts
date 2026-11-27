@@ -52,6 +52,12 @@ export class ReferentialController {
     return this.service.departures(gtfsId(id));
   }
 
+  @Get('disruptions')
+  @Header('Cache-Control', 'public, max-age=30')
+  disruptions(@Query('line') line?: string) {
+    return this.service.disruptions(line ? gtfsId(line) : undefined);
+  }
+
   @Get('vehicles/:id')
   @Header('Cache-Control', 'no-store')
   vehicle(@Param('id') id: string) {

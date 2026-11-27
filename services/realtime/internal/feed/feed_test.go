@@ -137,3 +137,14 @@ func asRateLimit(err error, target **RateLimitError) bool {
 	*target = rl
 	return ok
 }
+
+func TestNoMessages(t *testing.T) {
+	b, err := NoMessages{}.Fetch(context.Background(), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ds, err := siri.DecodeMessages(b, time.Now(), nil)
+	if err != nil || len(ds) != 0 || (NoMessages{}).Name() != "none" {
+		t.Errorf("%v %v", ds, err)
+	}
+}
