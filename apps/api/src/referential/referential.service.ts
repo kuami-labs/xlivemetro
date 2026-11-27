@@ -40,6 +40,7 @@ interface RealtimeJourney {
     arr: number;
     stops?: number;
     theoretical?: boolean;
+    path?: string[];
   }[];
 }
 
@@ -295,6 +296,13 @@ export class ReferentialService {
         arrival: iso(l.arr),
         stops: l.stops ?? 0,
         theoretical: l.theoretical ?? false,
+        // Tracé approché par les gares traversées, pour la carte (F14)
+        path: (l.path ?? [])
+          .flatMap((q) => {
+            const s = byQuay.get(q);
+            return s ? [[s.lon, s.lat] as [number, number]] : [];
+          })
+          .filter((c, i, all) => i === 0 || c[0] !== all[i - 1][0] || c[1] !== all[i - 1][1]),
       })),
     }));
   }

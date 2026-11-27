@@ -2,17 +2,18 @@
 
 import type { Layer, PickingInfo } from '@deck.gl/core';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { IconLayer, LineLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { IconLayer, LineLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { SimpleMeshLayer } from '@deck.gl/mesh-layers';
 import { CubeGeometry } from '@luma.gl/engine';
 import { Map as MapLibre, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type Line, type Mode } from '@/lib/api';
+import { api, type Journey, type Line, type Mode } from '@/lib/api';
 import { hexToRgba, type RGBA } from '@/lib/colors';
 import { ATTRIBUTION, API_URL, INITIAL_VIEW, REALTIME_URL } from '@/lib/config';
 import { loadFavorites, type Favorite } from '@/lib/favorites';
 import { geolocationMessage, nearbyStations, type StationPoint } from '@/lib/nearby';
+import { journeyBounds } from '@/lib/journeyFormat';
 import { loadTrip, saveTrip } from '@/lib/trip';
 import { MAP_THEMES } from '@/lib/mapTheme';
 import type { WorkerIn, WorkerOut } from '@/lib/realtime.worker';
@@ -40,6 +41,7 @@ import Legend from './Legend';
 import ModeFilter from './ModeFilter';
 import RepresentationPicker from './RepresentationPicker';
 import SearchBox from './SearchBox';
+import JourneyPanel from './JourneyPanel';
 import NearbyPanel, { type NearbyState } from './NearbyPanel';
 import StationPanel from './StationPanel';
 import TripPanel from './TripPanel';
@@ -127,6 +129,8 @@ export default function LiveMap() {
   // Suivi de caméra coupé une fois le voyageur arrivé (F15)
   const followOffRef = useRef(false);
   const stationPointsRef = useRef<StationPoint[]>([]);
+  // Itinéraire affiché sur la carte (F14)
+  const routeRef = useRef<Journey | null>(null);
 
   // Composant rendu seulement dans le navigateur (ssr: false) : URL et localStorage lisibles
   const [status, setStatus] = useState<Status>({
@@ -148,6 +152,7 @@ export default function LiveMap() {
   const [pitch, setPitch] = useState(INITIAL_VIEW.pitch);
   const [zoom, setZoom] = useState(INITIAL_VIEW.zoom);
   const [nearby, setNearby] = useState<NearbyState | null>(null);
+  const [journeyOpen, setJourneyOpen] = useState(false);
   const [linesByName, setLinesByName] = useState<Map<string, Line>>(new Map());
 
   const select = useCallback((s: Selection) => {
@@ -492,6 +497,37 @@ export default function LiveMap() {
       ];
     }
 
+    // Itinéraire choisi (F14) : couleur de la ligne pour les trains, gris fin pour la marche
+    function routeLayers(): Layer[] {
+      const j = routeRef.current;
+      if (!j) return [];
+      const walk: RGBA = themeRef.current === 'dark' ? [200, 200, 210, 200] : [90, 90, 100, 200];
+      const legs = j.legs.filter((l) => l.path.length > 1);
+      return [
+        new PathLayer({
+          id: 'itineraire-halo',
+          data: legs.filter((l) => !l.walk),
+          getPath: (l: (typeof legs)[number]) => l.path,
+          getColor: themeRef.current === 'dark' ? [0, 0, 0, 160] : [255, 255, 255, 220],
+          getWidth: 12,
+          widthUnits: 'pixels',
+          capRounded: true,
+          jointRounded: true,
+        }),
+        new PathLayer({
+          id: 'itineraire',
+          data: legs,
+          getPath: (l: (typeof legs)[number]) => l.path,
+          getColor: (l: (typeof legs)[number]) =>
+            l.walk || !l.line ? walk : hexToRgba(l.line.color),
+          getWidth: (l: (typeof legs)[number]) => (l.walk ? 3 : 7),
+          widthUnits: 'pixels',
+          capRounded: true,
+          jointRounded: true,
+        }),
+      ];
+    }
+
     // Marqueur « vous êtes ici » et cercle de précision
     function positionLayers(): Layer[] {
       const p = positionRef.current;
@@ -544,7 +580,12 @@ export default function LiveMap() {
           }
         }
         overlay.setProps({
-          layers: [...staticLayers, ...trainLayers(frame, t), ...positionLayers()],
+          layers: [
+            ...staticLayers,
+            ...routeLayers(),
+            ...trainLayers(frame, t),
+            ...positionLayers(),
+          ],
         });
       }
       raf = requestAnimationFrame(render);
@@ -668,6 +709,7 @@ export default function LiveMap() {
 
   // « Autour de moi » (F11) : position demandée au navigateur, gares proches calculées ici
   const locate = () => {
+    closeJourney();
     select(null);
     syncUrl();
     if (!('geolocation' in navigator)) {
@@ -700,9 +742,9 @@ export default function LiveMap() {
     syncUrl();
   };
 
-  const board = (tripId: string) => {
+  const board = (tripId: string, destinationId: string | null = null) => {
     followOffRef.current = false;
-    saveTrip({ tripId, destinationId: null });
+    saveTrip({ tripId, destinationId });
     select({ kind: 'trip', id: tripId });
     syncUrl();
   };
@@ -713,9 +755,52 @@ export default function LiveMap() {
 
   const endTrip = () => {
     followOffRef.current = false;
+    routeRef.current = null;
     saveTrip(null);
     select(null);
     syncUrl();
+  };
+
+  // Itinéraire (F12-F14) : la position reste dans cet onglet, comme pour « Autour de moi »
+  function closeJourney() {
+    setJourneyOpen(false);
+    routeRef.current = null;
+    positionRef.current = null;
+    syncUrl();
+  }
+
+  const openJourney = () => {
+    if (journeyOpen) return closeJourney();
+    setNearby(null);
+    select(null);
+    setJourneyOpen(true);
+    syncUrl();
+  };
+
+  const previewJourney = (j: Journey | null) => {
+    routeRef.current = j;
+    const b = j && journeyBounds(j);
+    if (b && mapRef.current) {
+      mapRef.current.fitBounds(
+        [
+          [b[0], b[1]],
+          [b[2], b[3]],
+        ],
+        {
+          // Panneau à gauche sur grand écran, en bas sur mobile
+          padding:
+            window.innerWidth >= 640
+              ? { top: 90, bottom: 60, left: 440, right: 60 }
+              : { top: 90, bottom: window.innerHeight * 0.5, left: 30, right: 30 },
+          maxZoom: 15,
+        },
+      );
+    }
+  };
+
+  const boardFromJourney = (tripId: string, destinationId: string | null) => {
+    setJourneyOpen(false);
+    board(tripId, destinationId);
   };
 
   const close = () => {
@@ -741,6 +826,26 @@ export default function LiveMap() {
               <circle cx="10" cy="10" r="1.8" fill="currentColor" />
               <path
                 d="M10 1 V4 M10 16 V19 M1 10 H4 M16 10 H19"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </IconButton>
+          <IconButton label="Itinéraire" pressed={journeyOpen} onClick={openJourney}>
+            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+              <circle
+                cx="4.5"
+                cy="15.5"
+                r="2.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <circle cx="15.5" cy="4.5" r="2.5" fill="currentColor" />
+              <path
+                d="M7 15.5 H12 A3 3 0 0 0 12 9.5 H8 A3 3 0 0 1 8 3.5 H13"
+                fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -792,6 +897,18 @@ export default function LiveMap() {
         onNorth={() => mapRef.current?.easeTo({ bearing: 0 })}
       />
 
+      {journeyOpen && !selection && (
+        <JourneyPanel
+          stationPoints={() => stationPointsRef.current}
+          onPreview={previewJourney}
+          onBoard={boardFromJourney}
+          onPosition={(p) => {
+            positionRef.current = p;
+            syncUrl();
+          }}
+          onClose={closeJourney}
+        />
+      )}
       {nearby && !selection && (
         <NearbyPanel
           state={nearby}

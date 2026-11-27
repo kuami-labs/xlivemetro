@@ -117,6 +117,11 @@ describe('API (e2e)', () => {
         },
       ],
     });
+    // IDFM:1 et IDFM:2 sont deux quais de la même gare : un seul point
+    expect(res.body[0].legs[0].path).toEqual([
+      [CDG.lon, CDG.lat],
+      [DEFENSE.lon, DEFENSE.lat],
+    ]);
     await request(app.getHttpServer()).get('/journeys?from=IDFM:999&to=IDFM:71517').expect(404);
     await request(app.getHttpServer()).get('/journeys?from=lat48.8&to=IDFM:71517').expect(400);
     await request(app.getHttpServer())
