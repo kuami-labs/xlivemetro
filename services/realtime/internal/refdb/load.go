@@ -106,6 +106,17 @@ func Load(ctx context.Context, db *pgxpool.Pool) (*gtfs.Feed, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = each(ctx, db, `SELECT from_stop_id, to_stop_id, min_sec FROM transfers`, func(r pgx.Rows) error {
+		var t gtfs.Transfer
+		if err := r.Scan(&t.From, &t.To, &t.MinSec); err != nil {
+			return err
+		}
+		f.Transfers = append(f.Transfers, t)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	if len(f.Routes) == 0 {
 		return nil, fmt.Errorf("référentiel vide : lancez pnpm db:seed ou pnpm gtfs:import")
 	}

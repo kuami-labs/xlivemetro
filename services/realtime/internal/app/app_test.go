@@ -158,3 +158,23 @@ func TestDisruptions(t *testing.T) {
 		t.Errorf("après erreur : %v", ds)
 	}
 }
+
+func TestJourneysEndpoint(t *testing.T) {
+	// Mardi 8 décembre 2026, 07:55 : T1 part de IDFM:1 vers IDFM:3
+	a, _ := setup(t, feed.NewSynthetic(nil), time.Date(2026, 12, 8, 7, 55, 0, 0, ref.Paris))
+	rec := httptest.NewRecorder()
+	a.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/journeys?from=IDFM:1~60&to=IDFM:3", nil))
+	var js []struct {
+		Transfers int
+		Legs      []struct {
+			TripKey string `json:"trip_id"`
+		}
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&js); err != nil {
+		t.Fatal(err)
+	}
+	// T1 n'atteint IDFM:3 qu'à 25:04 ; la correspondance à pied IDFM:2 → IDFM:3 (3 min) gagne
+	if len(js) != 1 || len(js[0].Legs) != 2 || js[0].Legs[0].TripKey != "T1@20261208" || js[0].Legs[1].TripKey != "" {
+		t.Fatalf("itinéraires : %+v", js)
+	}
+}

@@ -4,17 +4,18 @@
 
 ## Tables (référentiel GTFS filtré : métro, RER, tram)
 
-| Table                         | Contenu                                                                           | Index                           |
-| ----------------------------- | --------------------------------------------------------------------------------- | ------------------------------- |
-| `feed_versions`               | version du GTFS importé, date, empreinte                                          | —                               |
-| `agencies`                    | opérateurs (RATP, SNCF…)                                                          | —                               |
-| `routes`                      | lignes : id GTFS, nom court, mode, couleur, couleur du texte                      | `mode`                          |
-| `stops`                       | gares et quais : nom, `geom geography(Point)`, gare parente                       | GiST `geom`, GIN trigram `name` |
-| `shapes`                      | tracés : `geom geography(LineString)`                                             | GiST `geom`                     |
-| `trips`                       | courses : ligne, direction, tracé, service                                        | `route_id`, `service_id`        |
-| `stop_times`                  | horaires théoriques : course, arrêt, ordre, heures, **distance le long du tracé** | `(trip_id, stop_sequence)`      |
-| `calendars`, `calendar_dates` | jours de circulation                                                              | —                               |
-| `disruptions`                 | dernières perturbations (historique 7 jours)                                      | `(route_id, active)`            |
+| Table                         | Contenu                                                                                     | Index                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------- |
+| `feed_versions`               | version du GTFS importé, date, empreinte                                                    | —                               |
+| `agencies`                    | opérateurs (RATP, SNCF…)                                                                    | —                               |
+| `routes`                      | lignes : id GTFS, nom court, mode, couleur, couleur du texte                                | `mode`                          |
+| `stops`                       | gares et quais : nom, `geom geography(Point)`, gare parente                                 | GiST `geom`, GIN trigram `name` |
+| `shapes`                      | tracés : `geom geography(LineString)`                                                       | GiST `geom`                     |
+| `trips`                       | courses : ligne, direction, tracé, service                                                  | `route_id`, `service_id`        |
+| `stop_times`                  | horaires théoriques : course, arrêt, ordre, heures, **distance le long du tracé**           | `(trip_id, stop_sequence)`      |
+| `calendars`, `calendar_dates` | jours de circulation                                                                        | —                               |
+| `transfers`                   | correspondances à pied entre arrêts desservis (`transfers.txt`), durée minimale en secondes | clé (départ, arrivée)           |
+| `disruptions`                 | dernières perturbations (historique 7 jours)                                                | `(route_id, active)`            |
 
 - Prisma ne connaît pas les types PostGIS : colonnes déclarées `Unsupported("geography(...)")`, requêtes spatiales en SQL brut (`$queryRaw`) ou en Go (pgx).
 - La distance le long du tracé (`shape_dist_traveled`, calculée à l'import si absente) permet au service Go d'interpoler sans calcul géométrique à chaque cycle.

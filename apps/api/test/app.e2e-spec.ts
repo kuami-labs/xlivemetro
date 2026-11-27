@@ -5,7 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { RealtimeClient } from '../src/realtime/realtime.client.js';
 import { ReferentialRepository } from '../src/referential/referential.repository.js';
-import { CDG, FakeRealtime, FakeRepository, M1, RERA } from './fakes.js';
+import { CDG, DEFENSE, FakeRealtime, FakeRepository, M1, RERA } from './fakes.js';
 
 describe('API (e2e)', () => {
   let app: INestApplication<App>;
@@ -95,6 +95,33 @@ describe('API (e2e)', () => {
     expect(realtime.paths).toContain('/disruptions?line=IDFM%3AC01742');
     await request(app.getHttpServer()).get('/disruptions?line=IDFM:inconnue').expect(404);
     await request(app.getHttpServer()).get('/disruptions?line=pas-un-id').expect(400);
+  });
+
+  it('GET /journeys transmet seulement des quais et des durées', async () => {
+    const res = await request(app.getHttpServer())
+      .get(`/journeys?from=${CDG.id}~240&to=${DEFENSE.id}`)
+      .expect(200);
+    expect(realtime.paths.at(-1)).toBe(
+      '/journeys?from=IDFM%3A1%7E240%2CIDFM%3A2%7E240&to=IDFM%3A3%7E0',
+    );
+    expect(res.body[0]).toMatchObject({
+      durationMin: 20,
+      walkStartMin: 4,
+      transfers: 0,
+      legs: [
+        {
+          line: { shortName: '1' },
+          from: { id: CDG.id },
+          to: { id: DEFENSE.id, name: 'La Défense' },
+          stops: 4,
+        },
+      ],
+    });
+    await request(app.getHttpServer()).get('/journeys?from=IDFM:999&to=IDFM:71517').expect(404);
+    await request(app.getHttpServer()).get('/journeys?from=lat48.8&to=IDFM:71517').expect(400);
+    await request(app.getHttpServer())
+      .get(`/journeys?from=${CDG.id}&to=${DEFENSE.id}&at=demain`)
+      .expect(400);
   });
 
   it('GET /trips/:id : arrêts restants, avec ou sans train en circulation', async () => {

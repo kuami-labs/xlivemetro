@@ -76,6 +76,29 @@ export class FakeRealtime {
     if (path.startsWith('/trips/IDFM%3AT1') || path.startsWith('/trips/IDFM%3AT3'))
       return Promise.resolve([DEPARTURE] as T);
     if (path === '/health') return Promise.resolve({ status: 'ok' } as T);
+    if (path.startsWith('/journeys'))
+      return Promise.resolve([
+        {
+          depart: 1_796_626_800,
+          arrive: 1_796_628_000,
+          walk_start: 240,
+          walk_end: 0,
+          transfers: 0,
+          legs: [
+            {
+              walk: false,
+              trip_id: 'IDFM:T1@20261201',
+              route_id: M1.id,
+              headsign: 'La Défense',
+              from_stop_id: 'IDFM:1',
+              to_stop_id: 'IDFM:3',
+              dep: 1_796_627_040,
+              arr: 1_796_628_000,
+              stops: 4,
+            },
+          ],
+        },
+      ] as T);
     if (path.startsWith('/disruptions'))
       return Promise.resolve([
         { id: 'm1', channel: 'Perturbation', line_ids: [RERA.id], text: 'Trafic <b>perturbé</b>' },

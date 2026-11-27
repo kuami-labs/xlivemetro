@@ -50,20 +50,30 @@ func (t *Trip) Start() int64 { return t.Calls[0].Dep }
 // End renvoie l'arrivée au terminus.
 func (t *Trip) End() int64 { return t.Calls[len(t.Calls)-1].Arr }
 
+// Hop est une correspondance à pied vers un autre arrêt.
+type Hop struct {
+	To  string
+	Sec int64
+}
+
 // Ref est le référentiel du moment.
 type Ref struct {
-	Routes map[string]Route
-	Stops  map[string]gtfs.Stop
-	Shapes map[string]gtfs.Polyline
-	Trips  []*Trip
-	byCall map[string]*Trip
+	Routes    map[string]Route
+	Stops     map[string]gtfs.Stop
+	Shapes    map[string]gtfs.Polyline
+	Trips     []*Trip
+	Transfers map[string][]Hop // correspondances à pied, par arrêt de départ
+	byCall    map[string]*Trip
 }
 
 // Build construit le référentiel des jours de service day-1 et day (heure de Paris).
 func Build(f *gtfs.Feed, day time.Time) *Ref {
 	r := &Ref{
 		Routes: map[string]Route{}, Stops: map[string]gtfs.Stop{},
-		Shapes: f.Shapes, byCall: map[string]*Trip{},
+		Shapes: f.Shapes, Transfers: map[string][]Hop{}, byCall: map[string]*Trip{},
+	}
+	for _, t := range f.Transfers {
+		r.Transfers[t.From] = append(r.Transfers[t.From], Hop{To: t.To, Sec: int64(t.MinSec)})
 	}
 	for _, rt := range f.Routes {
 		r.Routes[rt.ID] = Route{ID: rt.ID, ShortName: rt.ShortName, Color: rt.Color, Mode: rt.Mode}

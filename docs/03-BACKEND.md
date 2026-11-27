@@ -13,16 +13,17 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## Service `realtime` (Go)
 
-| Package                          | Rôle                                                                                                                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `internal/feed`                  | Interface `Source` : `synthetic` (généré depuis le référentiel, ADR 0011), `replay` (réponses enregistrées) ou `prim` (appels réels). Choix par `FEED_SOURCE`            |
-| `internal/ingest`                | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)                                                       |
-| `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                   |
-| `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique |
-| `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                             |
-| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par ligne, instantané puis différences en Protocol Buffers (ADR 0013)                                                |
-| `internal/app`                   | Assemblage : chargement du référentiel, cycle d'ingestion (`FEED_INTERVAL`), calcul et diffusion toutes les 5 s, changement de jour                                      |
-| `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                    |
+| Package                          | Rôle                                                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `internal/feed`                  | Interface `Source` : `synthetic` (généré depuis le référentiel, ADR 0011), `replay` (réponses enregistrées) ou `prim` (appels réels). Choix par `FEED_SOURCE`                                     |
+| `internal/ingest`                | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)                                                                                |
+| `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                                            |
+| `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique                          |
+| `internal/journey`               | Moteur d'itinéraire RAPTOR (ADR 0018) : courses du jour regroupées par parcours, correspondances `transfers.txt`, horaires estimés ; jusqu'à 3 itinéraires non dominés, 4 correspondances au plus |
+| `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                                                      |
+| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par ligne, instantané puis différences en Protocol Buffers (ADR 0013)                                                                         |
+| `internal/app`                   | Assemblage : chargement du référentiel, cycle d'ingestion (`FEED_INTERVAL`), calcul et diffusion toutes les 5 s, changement de jour                                                               |
+| `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                                             |
 
 **Messages WebSocket** (définis dans `packages/proto/realtime.proto`) :
 
@@ -37,23 +38,24 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 - Panne de la source : l'état précédent continue d'être servi, avec son âge.
 - Messages de perturbation : SIRI Lite General Message toutes les 2 min avec PRIM (`PRIM_GM_URL`) ; **aucun** en mode `synthetic` ou `replay` (on n'invente pas de perturbation). Texte brut, 2 000 caractères au plus, messages expirés ignorés.
 - Le client WebSocket lent est déconnecté (file d'envoi bornée) : il ne ralentit jamais les autres.
-- Endpoints HTTP : `GET /health` (source, âge du dernier cycle, trains, clients ; `degraded` au-delà de 3 cycles sans données), `GET /ws` (WebSocket), `GET /vehicles/{id}`, `GET /departures`, `GET /trips/{id}/calls` et `GET /disruptions` (pour l'API, réseau interne). `GET /metrics` (Prometheus) reste à faire.
+- Endpoints HTTP : `GET /health` (source, âge du dernier cycle, trains, clients ; `degraded` au-delà de 3 cycles sans données), `GET /ws` (WebSocket), `GET /vehicles/{id}`, `GET /departures`, `GET /trips/{id}/calls`, `GET /disruptions` et `GET /journeys` (pour l'API, réseau interne). `GET /metrics` (Prometheus) reste à faire.
 
 ## API (NestJS, `apps/api`)
 
-| Méthode | Route                      | Rôle                                                                                                     |
-| ------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
-| GET     | `/health`                  | état : base, service temps réel                                                                          |
-| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                                                 |
-| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)                                             |
-| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                                                  |
-| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                                                         |
-| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                                                    |
-| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                                                     |
-| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                                     |
-| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                                 |
-| GET     | `/trips/:id`               | course suivie par un voyageur (F15) : arrêts restants même avant le départ, position du train s'il roule |
-| GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique)              |
+| Méthode | Route                      | Rôle                                                                                                                                             |
+| ------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET     | `/health`                  | état : base, service temps réel                                                                                                                  |
+| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                                                                                         |
+| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)                                                                                     |
+| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                                                                                          |
+| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                                                                                                 |
+| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                                                                                            |
+| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                                                                                             |
+| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                                                                             |
+| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                                                                         |
+| GET     | `/trips/:id`               | course suivie par un voyageur (F15) : arrêts restants même avant le départ, position du train s'il roule                                         |
+| GET     | `/journeys?from=&to=&at=`  | itinéraires métro/RER/tram (F12, F13) : gares avec temps de marche (`IDFM:…~secondes`, 5 au plus), jusqu'à 3 itinéraires ; jamais de coordonnées |
+| GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique)                                                      |
 
 - Tout est **public, en lecture seule**, sans authentification. Limitation de débit : 120 requêtes par minute et par IP (`@nestjs/throttler`).
 - Paramètres validés (identifiants `IDFM:…`, recherche de 2 à 64 caractères, mode connu) ; requêtes SQL paramétrées.

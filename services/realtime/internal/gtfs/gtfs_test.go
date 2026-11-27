@@ -102,6 +102,10 @@ func TestLoad(t *testing.T) {
 	if !near(sts[0].DistM, 0, 1) || !near(sts[1].DistM, 732, 3) || !near(sts[2].DistM, 1464, 3) {
 		t.Errorf("distances = %.0f %.0f %.0f", sts[0].DistM, sts[1].DistM, sts[2].DistM)
 	}
+	// IDFM:9 (arrêt de bus) n'est pas desservi par nos lignes ; IDFM:1 → IDFM:1 ignoré
+	if len(f.Transfers) != 1 || f.Transfers[0] != (Transfer{From: "IDFM:2", To: "IDFM:3", MinSec: 180}) {
+		t.Errorf("correspondances = %+v", f.Transfers)
+	}
 	if len(f.Calendars) != 2 || !f.Calendars[0].Days[0] || len(f.CalendarDates) != 1 {
 		t.Errorf("calendriers = %+v %+v", f.Calendars, f.CalendarDates)
 	}
@@ -143,7 +147,7 @@ func TestActiveServicesAndWriteDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(g.Trips) != 2 || len(g.Stops) != 4 || !near(g.StopTimes["T1"][2].DistM, 1464, 3) {
+	if len(g.Trips) != 2 || len(g.Stops) != 4 || len(g.Transfers) != 1 || !near(g.StopTimes["T1"][2].DistM, 1464, 3) {
 		t.Errorf("relecture : %d courses, %d arrêts", len(g.Trips), len(g.Stops))
 	}
 	if a := g.ActiveServices(mon); !a["JOUR_TYPE"] {

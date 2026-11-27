@@ -31,7 +31,7 @@ func Import(ctx context.Context, conn *pgx.Conn, feed *gtfs.Feed, meta Meta) (St
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // sans effet après Commit
 
-	if _, err := tx.Exec(ctx, `TRUNCATE stop_times, trips, shapes, stops, routes, agencies, calendars, calendar_dates`); err != nil {
+	if _, err := tx.Exec(ctx, `TRUNCATE transfers, stop_times, trips, shapes, stops, routes, agencies, calendars, calendar_dates`); err != nil {
 		return Stats{}, err
 	}
 
@@ -76,6 +76,12 @@ func Import(ctx context.Context, conn *pgx.Conn, feed *gtfs.Feed, meta Meta) (St
 					row = append(row, d)
 				}
 				return append(row, mustDate(c.StartDate), mustDate(c.EndDate))
+			})
+		},
+		func() error {
+			return copyRows(ctx, tx, "transfers", []string{"from_stop_id", "to_stop_id", "min_sec"}, len(feed.Transfers), func(i int) []any {
+				t := feed.Transfers[i]
+				return []any{t.From, t.To, t.MinSec}
 			})
 		},
 		func() error {

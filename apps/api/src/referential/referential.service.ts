@@ -23,6 +23,26 @@ export interface DisruptionView {
   validUntil: string | null;
 }
 
+interface RealtimeJourney {
+  depart: number;
+  arrive: number;
+  walk_start: number;
+  walk_end: number;
+  transfers: number;
+  legs: {
+    walk: boolean;
+    trip_id?: string;
+    route_id?: string;
+    headsign?: string;
+    from_stop_id: string;
+    to_stop_id: string;
+    dep: number;
+    arr: number;
+    stops?: number;
+    theoretical?: boolean;
+  }[];
+}
+
 interface RealtimeDisruption {
   id: string;
   channel: string;
@@ -232,6 +252,51 @@ export class ReferentialService {
         delaySeconds: c.expected - c.aimed,
       })),
     };
+  }
+
+  /**
+   * Itinéraires métro/RER/tram (F12, F13) entre des gares, chacune avec un temps de marche.
+   * Seuls des identifiants de gares et des durées sont transmis (PRD, confidentialité).
+   */
+  async journeys(
+    from: { id: string; walkSec: number }[],
+    to: { id: string; walkSec: number }[],
+    at?: number,
+  ) {
+    const { stations, lines, byQuay } = await this.load();
+    const quays = (points: { id: string; walkSec: number }[]) =>
+      points.flatMap((p) => {
+        const s = stations.get(p.id);
+        if (!s) throw new NotFoundException(`gare inconnue : ${p.id}`);
+        return s.quayIds.map((q) => `${q}~${p.walkSec}`);
+      });
+    const qs = new URLSearchParams({ from: quays(from).join(','), to: quays(to).join(',') });
+    if (at !== undefined) qs.set('at', String(at));
+    const js = (await this.realtime.get<RealtimeJourney[]>(`/journeys?${qs}`)) ?? [];
+    const station = (quay: string) => {
+      const s = byQuay.get(quay);
+      return { id: s?.id ?? null, name: s?.name ?? quay };
+    };
+    return js.map((j) => ({
+      depart: iso(j.depart),
+      arrive: iso(j.arrive),
+      durationMin: Math.round((j.arrive - j.depart) / 60),
+      walkStartMin: Math.round(j.walk_start / 60),
+      walkEndMin: Math.round(j.walk_end / 60),
+      transfers: j.transfers,
+      legs: j.legs.map((l) => ({
+        walk: l.walk,
+        tripId: l.trip_id ?? null,
+        line: l.route_id ? (lines.get(l.route_id) ?? null) : null,
+        headsign: l.headsign ?? null,
+        from: station(l.from_stop_id),
+        to: station(l.to_stop_id),
+        departure: iso(l.dep),
+        arrival: iso(l.arr),
+        stops: l.stops ?? 0,
+        theoretical: l.theoretical ?? false,
+      })),
+    }));
   }
 
   /** Perturbations en cours (toutes, ou d'une ligne). */

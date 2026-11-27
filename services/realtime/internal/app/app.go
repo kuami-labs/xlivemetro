@@ -11,11 +11,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/feed"
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/gtfs"
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/hub"
+	"github.com/kuami-labs/xlivemetro/services/realtime/internal/journey"
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/position"
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/ref"
 	"github.com/kuami-labs/xlivemetro/services/realtime/internal/siri"
@@ -36,6 +38,7 @@ type App struct {
 	// Messages de perturbation (SIRI Lite General Message) ; nil = aucun
 	Messages feed.Source
 	engine   *position.Engine
+	network  atomic.Pointer[journey.Network] // moteur d'itinéraire du jour (ADR 0018)
 	Hub      *hub.Hub
 	now      func() time.Time
 
@@ -54,7 +57,9 @@ func New(cfg Config, f *gtfs.Feed, src feed.Source, h *hub.Hub, now func() time.
 	if s, ok := src.(*feed.Synthetic); ok {
 		s.SetRef(r)
 	}
-	return &App{cfg: cfg, feed: f, source: src, engine: position.New(r), Hub: h, now: now, day: dayOf(t)}
+	a := &App{cfg: cfg, feed: f, source: src, engine: position.New(r), Hub: h, now: now, day: dayOf(t)}
+	a.network.Store(journey.NewNetwork(r))
+	return a
 }
 
 func dayOf(t time.Time) string { return t.In(ref.Paris).Format("2006-01-02") }
@@ -157,6 +162,7 @@ func (a *App) rollDay(now time.Time) {
 	}
 	r := ref.Build(a.feed, now)
 	a.engine.SetRef(r)
+	a.network.Store(journey.NewNetwork(r))
 	if s, ok := a.source.(*feed.Synthetic); ok {
 		s.SetRef(r)
 	}
@@ -244,6 +250,33 @@ func (a *App) Routes() http.Handler {
 		a.mu.Unlock()
 		writeJSON(w, out)
 	})
+	// Itinéraires : GET /journeys?from=IDFM:1~120,IDFM:2~300&to=IDFM:9~0&at=<unix>
+	// (arrêt~secondes de marche ; jamais de coordonnées, PRD)
+	mux.HandleFunc("GET /journeys", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		from, err1 := parsePoints(q.Get("from"))
+		to, err2 := parsePoints(q.Get("to"))
+		if err1 != nil || err2 != nil {
+			http.Error(w, "paramètres from et to invalides", http.StatusBadRequest)
+			return
+		}
+		depart := a.now()
+		if v := q.Get("at"); v != "" {
+			sec, err := strconv.ParseInt(v, 10, 64)
+			if err != nil || sec < depart.Unix()-3600 || sec > depart.Unix()+12*3600 {
+				http.Error(w, "paramètre at invalide", http.StatusBadRequest)
+				return
+			}
+			depart = time.Unix(sec, 0)
+		}
+		now := a.now()
+		times := func(t *ref.Trip) ([]int64, []int64, bool) { return a.engine.TripTimes(t, now) }
+		js := a.network.Load().Plan(journey.Request{From: from, To: to, Depart: depart}, times)
+		if js == nil {
+			js = []journey.Journey{}
+		}
+		writeJSON(w, js)
+	})
 	// Passages restants d'un train : GET /trips/{id}/calls
 	mux.HandleFunc("GET /trips/{id}/calls", func(w http.ResponseWriter, r *http.Request) {
 		calls, ok := a.engine.Calls(r.PathValue("id"), a.now())
@@ -259,4 +292,25 @@ func (a *App) Routes() http.Handler {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// parsePoints lit « arrêt~secondes,arrêt~secondes » (20 points au plus, marche ≤ 1 h).
+func parsePoints(v string) ([]journey.Point, error) {
+	parts := strings.Split(v, ",")
+	if v == "" || len(parts) > 20 {
+		return nil, errors.New("liste de points invalide")
+	}
+	out := make([]journey.Point, 0, len(parts))
+	for _, p := range parts {
+		stop, sec, ok := strings.Cut(p, "~")
+		if !ok {
+			sec = "0"
+		}
+		n, err := strconv.ParseInt(sec, 10, 64)
+		if err != nil || n < 0 || n > 3600 || !strings.HasPrefix(stop, "IDFM:") {
+			return nil, errors.New("point invalide")
+		}
+		out = append(out, journey.Point{Stop: stop, WalkSec: n})
+	}
+	return out, nil
 }

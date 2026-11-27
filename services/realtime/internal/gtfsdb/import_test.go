@@ -49,6 +49,10 @@ func TestImport(t *testing.T) {
 		}
 	}
 
+	var transfers int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM transfers`).Scan(&transfers); err != nil || transfers != 1 {
+		t.Errorf("correspondances : %d (%v)", transfers, err)
+	}
 	var stops, parents int
 	var length, distC float64
 	err = conn.QueryRow(ctx, `SELECT
