@@ -87,7 +87,8 @@ export class ReferentialService {
 
   async lines(mode?: Mode): Promise<Line[]> {
     const { lines } = await this.load();
-    return [...lines.values()].filter((l) => !mode || l.mode === mode);
+    // Ordre naturel : métro 1, 2… 14, puis RER A…E, puis tram T1…T14
+    return [...lines.values()].filter((l) => !mode || l.mode === mode).sort(byLine);
   }
 
   async line(id: string) {

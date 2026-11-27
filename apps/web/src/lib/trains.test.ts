@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { behind, haloColor, rameMatrix, ringWidth, trailMeters } from './trains';
+import { arrowSize, behind, haloColor, rameMatrix, ringWidth, trailMeters } from './trains';
 
 describe('trains', () => {
   it('épaissit l’anneau avec le retard', () => {
@@ -46,5 +46,14 @@ describe('trains', () => {
     expect(trailMeters(20)).toBe(300);
     expect(trailMeters(5)).toBe(150);
     expect(trailMeters(-1)).toBe(0);
+  });
+});
+
+describe('arrowSize', () => {
+  it('rapetisse les flèches en dézoomant, dans des bornes', () => {
+    expect(arrowSize(11)).toBe(12);
+    expect(arrowSize(14)).toBe(14);
+    expect(arrowSize(15)).toBe(28);
+    expect(arrowSize(18)).toBe(30);
   });
 });

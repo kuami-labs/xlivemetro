@@ -69,3 +69,8 @@ export function trailMeters(speed: number): number {
 
 /** Les rames 3D ne s'affichent qu'à partir de ce zoom ; pastilles au-delà (DESIGN.md). */
 export const MESH_MIN_ZOOM = 15;
+
+/** Taille des flèches (px) selon le zoom : 12 px en vue d’ensemble, 28 px au zoom 15, 30 au plus. */
+export function arrowSize(zoom: number): number {
+  return Math.round(Math.min(30, Math.max(12, 28 * 2 ** (zoom - 15))));
+}
