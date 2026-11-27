@@ -73,7 +73,7 @@ Depuis la session WSL, préfixe-les par `docker compose exec dev`. Hôtes des se
 2. **Branche dédiée** pour chaque tâche (`feature/…`, `fix/…`, `chore/…`, `docs/…`) depuis `develop`. Jamais de commit direct sur `main` ou `develop`.
 3. **Conventional Commits** : `type(zone): description` (zones : realtime, api, web, mcp, db, infra).
 4. Avant de dire qu'une tâche est finie : `pnpm lint`, `pnpm test` et `pnpm build` passent.
-5. **Tests obligatoires** pour tout calcul de position, d'interpolation ou de décodage de flux, sur des données fixes. Jamais d'appel réel à PRIM dans les tests (`FEED_SOURCE=replay`).
+5. **Tests obligatoires** pour tout calcul de position, d'interpolation ou de décodage de flux, sur des données fixes. Jamais d'appel réel à PRIM dans les tests (`FEED_SOURCE=synthetic`).
 6. **Aucune nouvelle dépendance** (npm ou Go) sans l'avoir proposée et justifiée d'abord.
 7. **Jamais de secret** dans le code ni de modification de `.env` commitée. Seul `.env.example` est versionné.
 8. Une décision d'architecture nouvelle → propose un ADR dans `docs/adr/`.

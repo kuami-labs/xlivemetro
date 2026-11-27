@@ -1,4 +1,4 @@
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color,route_sort_order
-M1,RATP,1,Métro 1,,1,,ffbe00,000000,1
+IDFM:C1,RATP,1,Métro 1,,1,,ffbe00,000000,1
 BUS,RATP,38,Bus 38,,3,,000000,FFFFFF,
 OVAL,RATP,ORLYVAL,Orlyval,,0,,3C91DC,FFFFFF,

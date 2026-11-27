@@ -92,7 +92,7 @@ func TestLoad(t *testing.T) {
 		t.Fatalf("courses = %d, tracés = %d", len(f.Trips), len(f.Shapes))
 	}
 	// 4 arrêts : A, B, C et la gare parente GA, insérée en premier
-	if len(f.Stops) != 4 || f.Stops[0].ID != "GA" {
+	if len(f.Stops) != 4 || f.Stops[0].ID != "IDFM:10" {
 		t.Fatalf("arrêts = %+v", f.Stops)
 	}
 	sts := f.StopTimes["T1"]

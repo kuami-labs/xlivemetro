@@ -88,7 +88,7 @@ Certains fichiers changent les règles du projet pour tout le monde : environnem
 
 - Déclencheur `pull_request`, **jamais `pull_request_target`** : ce dernier donne aux PR de forks l'accès aux secrets et aux droits d'écriture.
 - `permissions: contents: read` par défaut dans chaque workflow ; on n'élargit que job par job, si nécessaire.
-- **Aucun secret** dans la CI publique : les tests utilisent `FEED_SOURCE=replay` et des données fixes.
+- **Aucun secret** dans la CI publique : les tests utilisent `FEED_SOURCE=synthetic` et des données fixes.
 - Actions tierces : uniquement des éditeurs connus ; pour celles hors de `actions/*`, épinglez la version par **SHA de commit** plutôt que par tag. Dependabot les met à jour.
 - Un workflow qui déploie (plus tard) ne tourne que sur `main`, dans un environnement GitHub protégé.
 

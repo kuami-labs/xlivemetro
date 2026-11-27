@@ -303,7 +303,7 @@ jobs:
     env:
       DATABASE_URL: postgres://xlivemetro:xlivemetro@localhost:5432/xlivemetro
       REDIS_URL: redis://localhost:6379
-      FEED_SOURCE: replay
+      FEED_SOURCE: synthetic
     steps:
       - uses: actions/checkout@v7
       - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db redis
@@ -320,7 +320,7 @@ jobs:
 - **Job `tests` sans conteneur** : la base PostGIS est construite depuis `db/Dockerfile` avec `docker compose`, exactement comme en dev ; Node vient de `.nvmrc`.
 - **Deux jobs, deux checks** : `qualite` et `tests`, à exiger dans le ruleset une fois qu'ils ont tourné une fois.
 - **`permissions: contents: read`** et aucun secret : une PR venant d'un fork ne peut rien exfiltrer.
-- **`FEED_SOURCE: replay`** : la CI n'appelle jamais PRIM, n'a besoin d'aucune clé et reste déterministe.
+- **`FEED_SOURCE: synthetic`** : la CI n'appelle jamais PRIM, n'a besoin d'aucune clé et reste déterministe.
 - **`setup-go`** : la version de Go vient de `services/realtime/go.mod` ; `pnpm lint` et `pnpm test` incluent `go vet`, `gofmt -l` et `go test -race`.
 
 ### Dependabot

@@ -53,7 +53,7 @@ func TestImport(t *testing.T) {
 	var length, distC float64
 	err = conn.QueryRow(ctx, `SELECT
 		(SELECT count(*) FROM stops),
-		(SELECT count(*) FROM stops WHERE parent_id = 'GA'),
+		(SELECT count(*) FROM stops WHERE parent_id = 'IDFM:10'),
 		(SELECT ST_Length(geom) FROM shapes WHERE id = 'SH1'),
 		(SELECT dist_m FROM stop_times WHERE trip_id = 'T1' AND stop_sequence = 3)`).Scan(&stops, &parents, &length, &distC)
 	if err != nil {

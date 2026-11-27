@@ -107,7 +107,7 @@ La CI les relance sur chaque PR : une PR rouge ne peut pas être fusionnée.
 
 - Toute correction de bug ajoute un test qui échouait avant.
 - Tout calcul de position ou décodage de flux est couvert par des tests sur un jeu de données fixe.
-- Les tests n'appellent jamais PRIM : utilisez les fixtures et `FEED_SOURCE=replay`.
+- Les tests n'appellent jamais PRIM : utilisez les fixtures et `FEED_SOURCE=synthetic`.
 
 ### Code produit avec une IA
 
