@@ -107,6 +107,8 @@ describe('API (e2e)', () => {
     expect(res.body[0]).toMatchObject({
       durationMin: 20,
       walkStartMin: 4,
+      walkMin: 4,
+      fare: { amount: 2.55, currency: 'EUR', tickets: ['Métro-Train-RER'] },
       transfers: 0,
       legs: [
         {

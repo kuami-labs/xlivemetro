@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { TtlCache } from '../common/cache.js';
 import type { Mode } from '../common/validation.js';
 import { RealtimeClient, type Departure, type VehicleState } from '../realtime/realtime.client.js';
+import { estimateFare, type Fare } from './fare.js';
 import { ReferentialRepository, type Line, type Station } from './referential.repository.js';
 
 const HOUR = 3_600_000;
@@ -279,6 +280,7 @@ export class ReferentialService {
       return { id: s?.id ?? null, name: s?.name ?? quay };
     };
     return js.map((j) => ({
+      ...summary(j, lines, byQuay),
       depart: iso(j.depart),
       arrive: iso(j.arrive),
       durationMin: Math.round((j.arrive - j.depart) / 60),
@@ -360,4 +362,29 @@ function byLine(a: Line, b: Line): number {
     MODE_ORDER[a.mode] - MODE_ORDER[b.mode] ||
     a.shortName.localeCompare(b.shortName, 'fr', { numeric: true })
   );
+}
+
+/** Marche totale (minutes) et prix estimé d'un itinéraire (ADR 0019). */
+function summary(
+  j: RealtimeJourney,
+  lines: Map<string, Line>,
+  byQuay: Map<string, Station>,
+): { walkMin: number; fare: Fare } {
+  const walkSec =
+    j.walk_start + j.walk_end + j.legs.reduce((s, l) => s + (l.walk ? l.arr - l.dep : 0), 0);
+  const fare = estimateFare(
+    j.legs.flatMap((l) => {
+      const mode = l.route_id ? lines.get(l.route_id)?.mode : undefined;
+      return !l.walk && mode
+        ? [
+            {
+              mode,
+              fromId: byQuay.get(l.from_stop_id)?.id ?? null,
+              toId: byQuay.get(l.to_stop_id)?.id ?? null,
+            },
+          ]
+        : [];
+    }),
+  );
+  return { walkMin: Math.round(walkSec / 60), fare };
 }
