@@ -73,7 +73,8 @@ export class FakeRealtime {
     this.paths.push(path);
     if (path.startsWith('/departures')) return Promise.resolve([DEPARTURE] as T);
     if (path.startsWith('/vehicles/IDFM%3AT1')) return Promise.resolve(VEHICLE as T);
-    if (path.startsWith('/trips/IDFM%3AT1')) return Promise.resolve([DEPARTURE] as T);
+    if (path.startsWith('/trips/IDFM%3AT1') || path.startsWith('/trips/IDFM%3AT3'))
+      return Promise.resolve([DEPARTURE] as T);
     if (path === '/health') return Promise.resolve({ status: 'ok' } as T);
     if (path.startsWith('/disruptions'))
       return Promise.resolve([

@@ -58,6 +58,12 @@ export class ReferentialController {
     return this.service.disruptions(line ? gtfsId(line) : undefined);
   }
 
+  @Get('trips/:id')
+  @Header('Cache-Control', 'no-store')
+  trip(@Param('id') id: string) {
+    return this.service.trip(tripKey(id));
+  }
+
   @Get('vehicles/:id')
   @Header('Cache-Control', 'no-store')
   vehicle(@Param('id') id: string) {

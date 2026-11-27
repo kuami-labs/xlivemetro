@@ -48,6 +48,26 @@ export interface VehicleDetail {
   nextStops: { station: string; stationId: string | null; aimed: string; expected: string }[];
 }
 
+export interface TripDetail {
+  id: string;
+  line: Line | null;
+  headsign: string;
+  theoretical: boolean;
+  vehicle: {
+    position: { lat: number; lon: number; bearing: number; speed: number };
+    delaySeconds: number;
+    atStop: boolean;
+    nextStationId: string | null;
+  } | null;
+  calls: {
+    station: string;
+    stationId: string | null;
+    aimed: string;
+    expected: string;
+    delaySeconds: number;
+  }[];
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(API_URL + path);
   if (!res.ok) throw new Error(`${res.status} ${path}`);
@@ -59,6 +79,7 @@ export const api = {
   station: (id: string) => get<Station>(`/stations/${encodeURIComponent(id)}`),
   departures: (id: string) => get<Departure[]>(`/stations/${encodeURIComponent(id)}/departures`),
   search: (q: string) => get<Station[]>(`/stations/search?q=${encodeURIComponent(q)}`),
+  trip: (id: string) => get<TripDetail>(`/trips/${encodeURIComponent(id)}`),
   disruptions: () => get<Disruption[]>('/disruptions'),
   vehicle: (id: string) => get<VehicleDetail>(`/vehicles/${encodeURIComponent(id)}`),
 };
