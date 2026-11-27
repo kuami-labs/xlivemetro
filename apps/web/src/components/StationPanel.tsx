@@ -13,10 +13,13 @@ export default function StationPanel({
   id,
   onClose,
   onFavoritesChange,
+  onBoard,
 }: {
   id: string;
   onClose: () => void;
   onFavoritesChange: () => void;
+  /** « Je prends ce train » (F15) */
+  onBoard: (tripId: string) => void;
 }) {
   const [station, setStation] = useState<Station | null>(null);
   const [departures, setDepartures] = useState<Departure[] | null>(null);
@@ -134,6 +137,32 @@ export default function StationPanel({
               >
                 <LineBadge line={d.line} />
                 <span className="min-w-0 flex-1 truncate text-[15px]">{d.headsign}</span>
+                <button
+                  type="button"
+                  onClick={() => onBoard(d.tripId)}
+                  aria-label={`Je prends le ${d.line.shortName} vers ${d.headsign}`}
+                  title="Je prends ce train"
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:border-accent hover:text-accent"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect
+                      x="3"
+                      y="1.5"
+                      width="10"
+                      height="10"
+                      rx="2.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M3 7 H13 M5.5 14.5 L7 11.5 M10.5 14.5 L9 11.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
                 <span className="text-right">
                   <span className="block font-mono text-lg font-semibold text-accent">
                     {waitLabel(d.expected, now)}

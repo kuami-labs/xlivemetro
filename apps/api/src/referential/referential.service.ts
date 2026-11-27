@@ -198,6 +198,42 @@ export class ReferentialService {
     };
   }
 
+  /**
+   * Course suivie par un voyageur (F15) : arrêts restants, même avant le départ, et
+   * position du train s'il roule. 404 si la course est inconnue ou terminée.
+   */
+  async trip(key: string) {
+    const enc = encodeURIComponent(key);
+    const [calls, v] = await Promise.all([
+      this.realtime.get<Departure[]>(`/trips/${enc}/calls`),
+      this.realtime.get<VehicleState>(`/vehicles/${enc}`),
+    ]);
+    if (!calls || calls.length === 0) throw new NotFoundException('course inconnue ou terminée');
+    const { lines, byQuay } = await this.load();
+    const first = calls[0];
+    return {
+      id: key,
+      line: lines.get(first.route_id) ?? null,
+      headsign: first.headsign,
+      theoretical: first.theoretical,
+      vehicle: v
+        ? {
+            position: { lat: v.lat, lon: v.lon, bearing: v.bearing, speed: v.speed },
+            delaySeconds: v.delay,
+            atStop: v.at_stop,
+            nextStationId: byQuay.get(v.next_stop_id)?.id ?? null,
+          }
+        : null,
+      calls: calls.map((c) => ({
+        station: byQuay.get(c.stop_id)?.name ?? c.stop_id,
+        stationId: byQuay.get(c.stop_id)?.id ?? null,
+        aimed: iso(c.aimed),
+        expected: iso(c.expected),
+        delaySeconds: c.expected - c.aimed,
+      })),
+    };
+  }
+
   /** Perturbations en cours (toutes, ou d'une ligne). */
   async disruptions(lineId?: string): Promise<DisruptionView[]> {
     const { lines } = await this.load();

@@ -13,6 +13,7 @@ import { hexToRgba, type RGBA } from '@/lib/colors';
 import { ATTRIBUTION, API_URL, INITIAL_VIEW, REALTIME_URL } from '@/lib/config';
 import { loadFavorites, type Favorite } from '@/lib/favorites';
 import { geolocationMessage, nearbyStations, type StationPoint } from '@/lib/nearby';
+import { loadTrip, saveTrip } from '@/lib/trip';
 import { MAP_THEMES } from '@/lib/mapTheme';
 import type { WorkerIn, WorkerOut } from '@/lib/realtime.worker';
 import {
@@ -41,6 +42,7 @@ import RepresentationPicker from './RepresentationPicker';
 import SearchBox from './SearchBox';
 import NearbyPanel, { type NearbyState } from './NearbyPanel';
 import StationPanel from './StationPanel';
+import TripPanel from './TripPanel';
 import StatusBar from './StatusBar';
 import VehiclePanel from './VehiclePanel';
 import ViewControls from './ViewControls';
@@ -48,7 +50,7 @@ import ViewControls from './ViewControls';
 // MapLibre 6 charge son worker à part : on laisse le bundler fournir son adresse
 setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString());
 
-type Selection = { kind: 'station' | 'vehicle'; id: string } | null;
+type Selection = { kind: 'station' | 'vehicle' | 'trip'; id: string } | null;
 
 interface Status {
   connected: boolean;
@@ -98,6 +100,9 @@ function initialSelection(params: URLSearchParams): Selection {
   const follow = params.get('follow');
   if (follow) return { kind: 'vehicle', id: follow };
   if (stop) return { kind: 'station', id: stop };
+  // Trajet en cours dans cet onglet (F15)
+  const trip = loadTrip();
+  if (trip) return { kind: 'trip', id: trip.tripId };
   return null;
 }
 
@@ -119,6 +124,8 @@ export default function LiveMap() {
   const restyleRef = useRef<() => void>(() => {});
   // Position du visiteur : en mémoire seulement, jamais envoyée ni mise dans l'URL (PRD)
   const positionRef = useRef<{ lon: number; lat: number; accuracy: number } | null>(null);
+  // Suivi de caméra coupé une fois le voyageur arrivé (F15)
+  const followOffRef = useRef(false);
   const stationPointsRef = useRef<StationPoint[]>([]);
 
   // Composant rendu seulement dans le navigateur (ssr: false) : URL et localStorage lisibles
@@ -165,6 +172,7 @@ export default function LiveMap() {
           bearing: map.getBearing().toFixed(0),
         });
     const s = selectionRef.current;
+    // Le trajet en cours reste dans l'onglet : on partage le train suivi, pas le trajet
     if (s) p.set(s.kind === 'station' ? 'stop' : 'follow', s.id);
     if (modesRef.current.size < ALL_MODES.length) p.set('mode', [...modesRef.current].join(','));
     window.history.replaceState(null, '', `?${p}`);
@@ -520,7 +528,11 @@ export default function LiveMap() {
         interpolate(frame, reduceMotion ? frame.receivedAt : performance.now(), positions);
         // Caméra qui suit le train sélectionné (deux fois par seconde)
         const sel = selectionRef.current;
-        if (sel?.kind === 'vehicle' && t - lastFollow > 500 && !map.isMoving()) {
+        if (
+          (sel?.kind === 'vehicle' || (sel?.kind === 'trip' && !followOffRef.current)) &&
+          t - lastFollow > 500 &&
+          !map.isMoving()
+        ) {
           const i = frame.ids.indexOf(sel.id);
           if (i >= 0) {
             lastFollow = t;
@@ -688,6 +700,24 @@ export default function LiveMap() {
     syncUrl();
   };
 
+  const board = (tripId: string) => {
+    followOffRef.current = false;
+    saveTrip({ tripId, destinationId: null });
+    select({ kind: 'trip', id: tripId });
+    syncUrl();
+  };
+
+  const stopFollow = useCallback(() => {
+    followOffRef.current = true;
+  }, []);
+
+  const endTrip = () => {
+    followOffRef.current = false;
+    saveTrip(null);
+    select(null);
+    syncUrl();
+  };
+
   const close = () => {
     select(null);
     syncUrl();
@@ -777,6 +807,19 @@ export default function LiveMap() {
           id={selection.id}
           onClose={close}
           onFavoritesChange={() => setFavorites(loadFavorites())}
+          onBoard={board}
+        />
+      )}
+      {selection?.kind === 'trip' && (
+        <TripPanel
+          key={selection.id}
+          tripId={selection.id}
+          initialDestination={
+            loadTrip()?.tripId === selection.id ? (loadTrip()?.destinationId ?? null) : null
+          }
+          onStation={goToStation}
+          onEnd={endTrip}
+          onArrived={stopFollow}
         />
       )}
       {selection?.kind === 'vehicle' && (

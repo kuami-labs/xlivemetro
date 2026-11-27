@@ -97,6 +97,25 @@ describe('API (e2e)', () => {
     await request(app.getHttpServer()).get('/disruptions?line=pas-un-id').expect(400);
   });
 
+  it('GET /trips/:id : arrêts restants, avec ou sans train en circulation', async () => {
+    const res = await request(app.getHttpServer()).get('/trips/IDFM:T1@20261201').expect(200);
+    expect(res.body).toMatchObject({
+      line: { shortName: '1' },
+      headsign: 'Château de Vincennes',
+      vehicle: { delaySeconds: 90, nextStationId: CDG.id },
+    });
+    expect(res.body.calls[0]).toMatchObject({
+      station: CDG.name,
+      stationId: CDG.id,
+      delaySeconds: 90,
+    });
+    // Course connue mais pas encore partie : pas de position, arrêts quand même
+    const waiting = await request(app.getHttpServer()).get('/trips/IDFM:T3@20261201').expect(200);
+    expect(waiting.body.vehicle).toBeNull();
+    await request(app.getHttpServer()).get('/trips/IDFM:T9@20261201').expect(404);
+    await request(app.getHttpServer()).get('/trips/pas-une-course').expect(400);
+  });
+
   it('GET /vehicles/:id', async () => {
     const res = await request(app.getHttpServer()).get('/vehicles/IDFM:T1@20261201').expect(200);
     expect(res.body).toMatchObject({ delaySeconds: 90, line: { shortName: '1' } });

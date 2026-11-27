@@ -41,18 +41,19 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## API (NestJS, `apps/api`)
 
-| Méthode | Route                      | Rôle                                                                                        |
-| ------- | -------------------------- | ------------------------------------------------------------------------------------------- |
-| GET     | `/health`                  | état : base, service temps réel                                                             |
-| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                                    |
-| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)                                |
-| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                                     |
-| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                                            |
-| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                                       |
-| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                                        |
-| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                        |
-| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                    |
-| GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique) |
+| Méthode | Route                      | Rôle                                                                                                     |
+| ------- | -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| GET     | `/health`                  | état : base, service temps réel                                                                          |
+| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                                                 |
+| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)                                             |
+| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                                                  |
+| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                                                         |
+| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                                                    |
+| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                                                     |
+| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                                     |
+| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                                 |
+| GET     | `/trips/:id`               | course suivie par un voyageur (F15) : arrêts restants même avant le départ, position du train s'il roule |
+| GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique)              |
 
 - Tout est **public, en lecture seule**, sans authentification. Limitation de débit : 120 requêtes par minute et par IP (`@nestjs/throttler`).
 - Paramètres validés (identifiants `IDFM:…`, recherche de 2 à 64 caractères, mode connu) ; requêtes SQL paramétrées.
