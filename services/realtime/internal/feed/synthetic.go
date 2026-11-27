@@ -3,6 +3,7 @@ package feed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"hash/fnv"
 	"sync/atomic"
 	"time"
@@ -17,10 +18,12 @@ type Synthetic struct {
 	ref atomic.Pointer[ref.Ref]
 }
 
-// NewSynthetic crée la source sur un référentiel.
+// NewSynthetic crée la source sur un référentiel (nil : fourni plus tard par SetRef).
 func NewSynthetic(r *ref.Ref) *Synthetic {
 	s := &Synthetic{}
-	s.SetRef(r)
+	if r != nil {
+		s.SetRef(r)
+	}
 	return s
 }
 
@@ -49,6 +52,9 @@ func Delay(key string) time.Duration {
 // Fetch implémente Source : courses en circulation et celles qui partent dans l'heure.
 func (s *Synthetic) Fetch(_ context.Context, now time.Time) ([]byte, error) {
 	r := s.ref.Load()
+	if r == nil {
+		return nil, errors.New("flux synthétique sans référentiel")
+	}
 	var doc siri.Document
 	sd := &doc.Siri.ServiceDelivery
 	sd.ResponseTimestamp = now.UTC()

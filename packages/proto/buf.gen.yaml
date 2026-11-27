@@ -1,0 +1,9 @@
+# Génération du code Go (service realtime) et TypeScript (web). Le code généré est versionné.
+version: v2
+plugins:
+  - local: ['sh', '-c', 'cd ../../services/realtime && exec go tool protoc-gen-go']
+    out: ../../services/realtime/gen
+    opt: paths=source_relative
+  - local: protoc-gen-es
+    out: src/gen
+    opt: target=ts,import_extension=js

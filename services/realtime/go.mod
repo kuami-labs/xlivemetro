@@ -2,7 +2,11 @@ module github.com/kuami-labs/xlivemetro/services/realtime
 
 go 1.27.4
 
-require github.com/jackc/pgx/v5 v5.13.0
+require (
+	github.com/coder/websocket v1.8.15
+	github.com/jackc/pgx/v5 v5.13.0
+	google.golang.org/protobuf v1.36.12
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -11,3 +15,5 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )
+
+tool google.golang.org/protobuf/cmd/protoc-gen-go

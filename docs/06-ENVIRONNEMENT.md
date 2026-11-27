@@ -86,9 +86,9 @@ xlivemetro/
 # Même base que l'image de production : Node 26 (LTS) sur Debian trixie
 FROM mcr.microsoft.com/devcontainers/typescript-node:26-trixie
 
-# Client PostgreSQL 19 (dépôt officiel PGDG, comme le serveur) et compilateur protobuf
+# Client PostgreSQL 19 (dépôt officiel PGDG, comme le serveur)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-common protobuf-compiler \
+    && apt-get install -y --no-install-recommends postgresql-common \
     && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
     && apt-get install -y --no-install-recommends postgresql-client-19 \
     && rm -rf /var/lib/apt/lists/*

@@ -1,6 +1,6 @@
 # Base de données – XLiveMetro
 
-> PostgreSQL 19 + **PostGIS 3.7** + `pg_trgm`, schéma géré par Prisma (`packages/db`). Le temps réel ne passe **pas** par PostgreSQL : il vit dans la mémoire du service Go et dans Redis.
+> PostgreSQL 19 + **PostGIS 3.7** + `pg_trgm`, schéma géré par Prisma (`packages/db`). Le temps réel ne passe **pas** par PostgreSQL : il vit dans la mémoire du service Go (ADR 0013).
 
 ## Tables (référentiel GTFS filtré : métro, RER, tram)
 
@@ -22,13 +22,10 @@
 
 ## Redis
 
-| Clé                       | Contenu                         | Durée                  |
-| ------------------------- | ------------------------------- | ---------------------- |
-| `rt:state`                | dernier état complet (protobuf) | jusqu'au cycle suivant |
-| `rt:updates` (pub/sub)    | notification de nouveau cycle   | —                      |
-| `rt:lock:ingest`          | verrou de l'ingestion           | 60 s                   |
-| `cache:departures:<stop>` | prochains passages              | 30 s                   |
-| `cache:disruptions`       | perturbations                   | 120 s                  |
+| Clé                       | Contenu            | Durée |
+| ------------------------- | ------------------ | ----- |
+| `cache:departures:<stop>` | prochains passages | 30 s  |
+| `cache:disruptions`       | perturbations      | 120 s |
 
 ## Migrations et données
 

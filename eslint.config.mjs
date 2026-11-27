@@ -5,8 +5,15 @@ import prettier from 'eslint-config-prettier/flat';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  // db/data : fichiers de PostgreSQL ; .next, dist : fichiers générés
-  globalIgnores(['**/dist/', '**/.next/', 'db/data/', 'coverage/']),
+  // db/data : fichiers de PostgreSQL ; .next, dist, gen, generated : fichiers générés
+  globalIgnores([
+    '**/dist/',
+    '**/.next/',
+    'db/data/',
+    'coverage/',
+    '**/gen/',
+    'packages/db/src/generated/',
+  ]),
   eslint.configs.recommended,
   tseslint.configs.recommended,
   prettier,
