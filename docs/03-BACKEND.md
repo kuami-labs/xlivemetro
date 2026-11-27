@@ -16,7 +16,7 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 | Package             | Rôle                                                                                                                         |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `internal/feed`     | Interface `Source` : `prim` (appels réels) ou `replay` (fichiers de `fixtures/replay`). Choix par `FEED_SOURCE`              |
-| `internal/ingest`   | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode GTFS-RT / SIRI, normalise                           |
+| `internal/ingest`   | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)           |
 | `internal/position` | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`) |
 | `internal/hub`      | Connexions WebSocket, abonnement par zone (bbox) et par mode, envoi de diffs binaires                                        |
 | `internal/recorder` | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                        |
@@ -55,7 +55,7 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## Import GTFS (`packages/db`)
 
-- `pnpm gtfs:import` télécharge le GTFS IDFM, filtre métro/RER/tram, charge lignes, arrêts, tracés et horaires dans PostGIS.
+- `pnpm gtfs:import` télécharge le GTFS IDFM (`https://eu.ftp.opendatasoft.com/stif/GTFS/IDFM-gtfs.zip`, sans clé), filtre métro/RER/tram, charge lignes, arrêts, tracés et horaires dans PostGIS.
 - Idempotent : import dans des tables temporaires, puis bascule en une transaction.
 - Planifié une fois par jour (job dans `realtime` ou cron de l'hébergeur, à décider).
 
@@ -88,7 +88,7 @@ Exemple de configuration client :
 | Zone             | Ce qui est testé                                                        | Données                       |
 | ---------------- | ----------------------------------------------------------------------- | ----------------------------- |
 | `position` (Go)  | interpolation, changement de segment, course en avance/retard, terminus | courses fixes                 |
-| `ingest` (Go)    | décodage GTFS-RT et SIRI, flux vide, flux corrompu                      | fichiers de `fixtures/replay` |
+| `ingest` (Go)    | décodage SIRI Lite, flux vide, flux corrompu                            | fichiers de `fixtures/replay` |
 | `hub` (Go)       | diff, abonnement par bbox, client lent déconnecté                       | tests avec `httptest`         |
 | api              | routes, recherche, cache, throttler                                     | base de test + seed           |
 | mcp              | chaque outil, avec une API simulée                                      | réponses fixes                |
