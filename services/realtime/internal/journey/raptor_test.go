@@ -65,7 +65,10 @@ func TestFastestWithTransferAndDirect(t *testing.T) {
 	if fast.Arrive != at(25) || fast.Transfers != 1 || len(fast.Legs) != 3 {
 		t.Fatalf("rapide : %+v", fast)
 	}
-	if !fast.Legs[1].Walk || fast.Legs[1].From != "X" || fast.Legs[1].To != "Y" {
+	if p := direct.Legs[0].Path; len(p) != 3 || p[0] != "A" || p[2] != "C" {
+		t.Errorf("chemin du direct : %v", p)
+	}
+	if !fast.Legs[1].Walk || fast.Legs[1].From != "X" || fast.Legs[1].To != "Y" || len(fast.Legs[1].Path) != 2 {
 		t.Errorf("marche de correspondance : %+v", fast.Legs[1])
 	}
 	if fast.Legs[0].Dep != at(6) || fast.Legs[2].TripKey != "L3-a" || fast.Depart != at(6) {

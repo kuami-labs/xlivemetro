@@ -29,6 +29,8 @@ export const DEFENSE: Station = {
   ...CDG,
   id: 'IDFM:71517',
   name: 'La Défense',
+  lat: 48.892,
+  lon: 2.238,
   quayIds: ['IDFM:3'],
 };
 
@@ -95,6 +97,7 @@ export class FakeRealtime {
               dep: 1_796_627_040,
               arr: 1_796_628_000,
               stops: 4,
+              path: ['IDFM:1', 'IDFM:2', 'IDFM:3'],
             },
           ],
         },

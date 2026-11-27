@@ -68,6 +68,36 @@ export interface TripDetail {
   }[];
 }
 
+export interface JourneyLeg {
+  walk: boolean;
+  tripId: string | null;
+  line: Line | null;
+  headsign: string | null;
+  from: { id: string | null; name: string };
+  to: { id: string | null; name: string };
+  departure: string;
+  arrival: string;
+  stops: number;
+  theoretical: boolean;
+  path: [number, number][];
+}
+
+export interface Journey {
+  depart: string;
+  arrive: string;
+  durationMin: number;
+  walkStartMin: number;
+  walkEndMin: number;
+  transfers: number;
+  legs: JourneyLeg[];
+}
+
+/** Une gare avec un temps de marche (secondes) : seul ce qui part au serveur (PRD). */
+export interface StationWalk {
+  id: string;
+  walkSec: number;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(API_URL + path);
   if (!res.ok) throw new Error(`${res.status} ${path}`);
@@ -80,6 +110,12 @@ export const api = {
   departures: (id: string) => get<Departure[]>(`/stations/${encodeURIComponent(id)}/departures`),
   search: (q: string) => get<Station[]>(`/stations/search?q=${encodeURIComponent(q)}`),
   trip: (id: string) => get<TripDetail>(`/trips/${encodeURIComponent(id)}`),
+  journeys: (from: StationWalk[], to: StationWalk[]) => {
+    const enc = (ps: StationWalk[]) => ps.map((p) => `${p.id}~${Math.round(p.walkSec)}`).join(',');
+    return get<Journey[]>(
+      `/journeys?from=${encodeURIComponent(enc(from))}&to=${encodeURIComponent(enc(to))}`,
+    );
+  },
   disruptions: () => get<Disruption[]>('/disruptions'),
   vehicle: (id: string) => get<VehicleDetail>(`/vehicles/${encodeURIComponent(id)}`),
 };

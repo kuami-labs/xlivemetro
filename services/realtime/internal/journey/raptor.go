@@ -27,16 +27,17 @@ type Request struct {
 
 // Leg est un tronçon : à bord d'une course, ou à pied entre deux arrêts.
 type Leg struct {
-	Walk        bool   `json:"walk"`
-	TripKey     string `json:"trip_id,omitempty"`
-	RouteID     string `json:"route_id,omitempty"`
-	Headsign    string `json:"headsign,omitempty"`
-	From        string `json:"from_stop_id"`
-	To          string `json:"to_stop_id"`
-	Dep         int64  `json:"dep"`
-	Arr         int64  `json:"arr"`
-	Stops       int    `json:"stops,omitempty"` // arrêts parcourus
-	Theoretical bool   `json:"theoretical,omitempty"`
+	Walk        bool     `json:"walk"`
+	TripKey     string   `json:"trip_id,omitempty"`
+	RouteID     string   `json:"route_id,omitempty"`
+	Headsign    string   `json:"headsign,omitempty"`
+	From        string   `json:"from_stop_id"`
+	To          string   `json:"to_stop_id"`
+	Dep         int64    `json:"dep"`
+	Arr         int64    `json:"arr"`
+	Stops       int      `json:"stops,omitempty"` // arrêts parcourus
+	Theoretical bool     `json:"theoretical,omitempty"`
+	Path        []string `json:"path"` // arrêts traversés, de la montée à la descente (carte, F14)
 }
 
 // Journey est un itinéraire : marche initiale, tronçons, marche finale.
@@ -314,17 +315,25 @@ func (n *Network) rebuild(k int, tau []map[string]int64, parent []map[string]lab
 			return j, true
 		case kindWalk:
 			at := tau[round][s]
-			j.Legs = append(j.Legs, Leg{Walk: true, From: l.from, To: s, Dep: at - l.walk, Arr: at})
+			j.Legs = append(j.Legs, Leg{Walk: true, From: l.from, To: s, Dep: at - l.walk, Arr: at, Path: []string{l.from, s}})
 			s = l.from
 		case kindRide:
 			t := l.trip
 			j.Legs = append(j.Legs, Leg{
 				TripKey: t.Key, RouteID: t.RouteID, Headsign: t.Headsign,
 				From: l.boardStop, To: s, Dep: l.boardDep, Arr: l.arrive, Stops: l.alight - l.board,
-				Theoretical: theo[t],
+				Theoretical: theo[t], Path: path(t, l.board, l.alight),
 			})
 			s, round = l.boardStop, round-1
 		}
 	}
 	return Journey{}, false
+}
+
+func path(t *ref.Trip, from, to int) []string {
+	out := make([]string, 0, to-from+1)
+	for i := from; i <= to; i++ {
+		out = append(out, t.Calls[i].StopID)
+	}
+	return out
 }
