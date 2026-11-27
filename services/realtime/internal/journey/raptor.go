@@ -23,6 +23,8 @@ type Request struct {
 	To           []Point
 	Depart       time.Time
 	MaxTransfers int // 4 par défaut
+	// Lignes à ne pas emprunter (recherche d'alternatives)
+	ExcludeRoutes map[string]bool
 }
 
 // Leg est un tronçon : à bord d'une course, ou à pied entre deux arrêts.
@@ -144,6 +146,9 @@ func (n *Network) Plan(req Request, times Times) []Journey {
 		queue := map[int]int{}
 		for s := range marked {
 			for _, sr := range n.byStop[s] {
+				if req.ExcludeRoutes[n.patterns[sr.pattern].route] {
+					continue
+				}
 				if i, ok := queue[sr.pattern]; !ok || sr.index < i {
 					queue[sr.pattern] = sr.index
 				}

@@ -131,6 +131,9 @@ export default function LiveMap() {
   const stationPointsRef = useRef<StationPoint[]>([]);
   // Itinéraire affiché sur la carte (F14)
   const routeRef = useRef<Journey | null>(null);
+  // Lignes de l'itinéraire choisi : le reste du réseau est estompé (null = réseau normal)
+  const focusRef = useRef<Set<string> | null>(null);
+  const refocusRef = useRef<() => void>(() => {});
 
   // Composant rendu seulement dans le navigateur (ssr: false) : URL et localStorage lisibles
   const [status, setStatus] = useState<Status>({
@@ -301,7 +304,35 @@ export default function LiveMap() {
         },
       });
       filterLines();
+      applyFocus();
     }
+
+    // Itinéraire choisi : seul son tracé est net ; ses lignes restent devinables (branches
+    // comprises), le reste du réseau passe au second plan
+    function applyFocus() {
+      const ids = focusRef.current;
+      const halo = MAP_THEMES[themeRef.current].lineHaloOpacity;
+      const inRoute = ['in', ['get', 'id'], ['literal', ids ? [...ids] : []]];
+      if (map.getLayer('lignes')) {
+        map.setPaintProperty(
+          'lignes',
+          'line-opacity',
+          (ids ? ['case', inRoute, 0.35, 0.1] : 1) as never,
+        );
+      }
+      if (map.getLayer('lignes-halo')) {
+        map.setPaintProperty(
+          'lignes-halo',
+          'line-opacity',
+          (ids ? ['case', inRoute, halo * 0.3, halo * 0.08] : halo) as never,
+        );
+      }
+    }
+    refocusRef.current = () => {
+      applyFocus();
+      rebuild();
+      recolor();
+    };
 
     function filterLines() {
       const filter = ['in', ['get', 'mode'], ['literal', [...modesRef.current]]];
@@ -326,6 +357,7 @@ export default function LiveMap() {
           lineWidthMinPixels: 1.5,
           stroked: true,
           pickable: true,
+          opacity: focusRef.current ? 0.25 : 1,
           updateTriggers: { getFillColor: themeRef.current, getLineColor: themeRef.current },
         }),
       ];
@@ -375,6 +407,7 @@ export default function LiveMap() {
       fill = new Uint8Array(n * 4);
       outline = new Uint8Array(n * 4);
       widths = new Float32Array(n);
+      const focus = focusRef.current;
       for (let i = 0; i < n; i++) {
         const theoretical = (frame.flags[i] & THEORETICAL) !== 0;
         const d = frame.delays[i];
@@ -390,6 +423,11 @@ export default function LiveMap() {
           i * 4,
         );
         widths[i] = ringWidth(d, theoretical);
+        // Trains hors de l'itinéraire choisi : presque transparents
+        if (focus && !focus.has(frame.routeIds[i])) {
+          fill[i * 4 + 3] = 35;
+          outline[i * 4 + 3] = 35;
+        }
       }
     }
 
@@ -397,7 +435,12 @@ export default function LiveMap() {
     function trainLayers(f: VehicleFrame, t: number): Layer[] {
       const n = f.ids.length;
       const rep = representationRef.current;
-      const color = (i: number): RGBA => [fill[i * 4], fill[i * 4 + 1], fill[i * 4 + 2], 255];
+      const color = (i: number): RGBA => [
+        fill[i * 4],
+        fill[i * 4 + 1],
+        fill[i * 4 + 2],
+        fill[i * 4 + 3],
+      ];
       const pos = (i: number): [number, number] => [positions[i * 2], positions[i * 2 + 1]];
       const idx = { length: n };
       const trigger = { getPosition: t, getSourcePosition: t, getTargetPosition: t };
@@ -469,7 +512,7 @@ export default function LiveMap() {
             fill[index * 4],
             fill[index * 4 + 1],
             fill[index * 4 + 2],
-            90,
+            Math.round((90 * fill[index * 4 + 3]) / 255),
           ],
           getWidth: 5,
           widthUnits: 'pixels',
@@ -755,16 +798,24 @@ export default function LiveMap() {
 
   const endTrip = () => {
     followOffRef.current = false;
-    routeRef.current = null;
+    setRoute(null);
     saveTrip(null);
     select(null);
     syncUrl();
   };
 
+  // Itinéraire affiché : seul lui est tracé, et ses lignes sont mises en avant (F14)
+  function setRoute(j: Journey | null) {
+    routeRef.current = j;
+    const ids = j?.legs.flatMap((l) => (!l.walk && l.line ? [l.line.id] : [])) ?? [];
+    focusRef.current = ids.length > 0 ? new Set(ids) : null;
+    refocusRef.current();
+  }
+
   // Itinéraire (F12-F14) : la position reste dans cet onglet, comme pour « Autour de moi »
   function closeJourney() {
     setJourneyOpen(false);
-    routeRef.current = null;
+    setRoute(null);
     positionRef.current = null;
     syncUrl();
   }
@@ -778,7 +829,7 @@ export default function LiveMap() {
   };
 
   const previewJourney = (j: Journey | null) => {
-    routeRef.current = j;
+    setRoute(j);
     const b = j && journeyBounds(j);
     if (b && mapRef.current) {
       mapRef.current.fitBounds(

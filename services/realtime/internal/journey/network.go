@@ -11,6 +11,7 @@ import (
 
 // pattern regroupe les courses qui desservent exactement la même suite d'arrêts.
 type pattern struct {
+	route string
 	stops []string
 	trips []*ref.Trip // triées par départ théorique au premier arrêt
 }
@@ -47,7 +48,7 @@ func NewNetwork(r *ref.Ref) *Network {
 			}
 			i = len(n.patterns)
 			index[key.String()] = i
-			n.patterns = append(n.patterns, pattern{stops: stops})
+			n.patterns = append(n.patterns, pattern{route: t.RouteID, stops: stops})
 		}
 		n.patterns[i].trips = append(n.patterns[i].trips, t)
 	}

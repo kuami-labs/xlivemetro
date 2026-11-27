@@ -271,7 +271,7 @@ func (a *App) Routes() http.Handler {
 		}
 		now := a.now()
 		times := func(t *ref.Trip) ([]int64, []int64, bool) { return a.engine.TripTimes(t, now) }
-		js := a.network.Load().Plan(journey.Request{From: from, To: to, Depart: depart}, times)
+		js := a.network.Load().Alternatives(journey.Request{From: from, To: to, Depart: depart}, times)
 		if js == nil {
 			js = []journey.Journey{}
 		}

@@ -88,6 +88,10 @@ export interface Journey {
   durationMin: number;
   walkStartMin: number;
   walkEndMin: number;
+  /** Marche totale : départ, correspondances, arrivée */
+  walkMin: number;
+  /** Prix estimé en tickets à l'unité, plein tarif (ADR 0019) */
+  fare: { amount: number; currency: 'EUR'; tickets: string[] };
   transfers: number;
   legs: JourneyLeg[];
 }

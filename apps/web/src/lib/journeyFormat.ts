@@ -27,3 +27,63 @@ export function journeyBounds(j: Journey): [number, number, number, number] | nu
   }
   return [w, s, e, n];
 }
+
+export type JourneyTag = 'fastest' | 'fewestTransfers' | 'leastWalk' | 'cheapest' | 'longest';
+
+export const TAG_LABELS: Record<JourneyTag, string> = {
+  fastest: 'Le plus rapide',
+  fewestTransfers: 'Moins de correspondances',
+  leastWalk: 'Moins de marche',
+  cheapest: 'Le moins cher',
+  longest: 'Le plus long',
+};
+
+/**
+ * Labels de chaque option, relatifs aux autres. Un label n'apparaît que si le critère varie
+ * entre les options ; en cas d'égalité, il va à la première option de la liste (la plus tôt).
+ */
+export function journeyTags(js: Journey[]): JourneyTag[][] {
+  const tags: JourneyTag[][] = js.map(() => []);
+  if (js.length === 0) return tags;
+  const pick = (values: number[], tag: JourneyTag, best: 'min' | 'max') => {
+    if (new Set(values).size < 2) return;
+    const target = best === 'min' ? Math.min(...values) : Math.max(...values);
+    tags[values.indexOf(target)].push(tag);
+  };
+  const arrive = js.map((j) => Date.parse(j.arrive));
+  tags[arrive.indexOf(Math.min(...arrive))].push('fastest');
+  if (js.length < 2) return tags;
+  pick(
+    js.map((j) => j.transfers),
+    'fewestTransfers',
+    'min',
+  );
+  pick(
+    js.map((j) => j.walkMin),
+    'leastWalk',
+    'min',
+  );
+  pick(
+    js.map((j) => j.fare.amount),
+    'cheapest',
+    'min',
+  );
+  pick(
+    js.map((j) => j.durationMin),
+    'longest',
+    'max',
+  );
+  return tags;
+}
+
+/** « +12 min » par rapport au plus rapide (rien pour le plus rapide). */
+export function extraMinutes(j: Journey, js: Journey[]): string {
+  const best = Math.min(...js.map((x) => Date.parse(x.arrive)));
+  const extra = Math.round((Date.parse(j.arrive) - best) / 60_000);
+  return extra > 0 ? `+${extra} min` : '';
+}
+
+/** « 2,55 € » */
+export function fareLabel(amount: number): string {
+  return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+}

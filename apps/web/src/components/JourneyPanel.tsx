@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import { api, type Journey, type Station, type StationWalk } from '@/lib/api';
 import { timeLabel } from '@/lib/format';
-import { firstRide, journeySummary } from '@/lib/journeyFormat';
+import {
+  extraMinutes,
+  fareLabel,
+  firstRide,
+  journeySummary,
+  journeyTags,
+  TAG_LABELS,
+} from '@/lib/journeyFormat';
 import { geolocationMessage, nearbyStations, type StationPoint } from '@/lib/nearby';
 import LineBadge from './LineBadge';
 import Panel from './Panel';
@@ -99,6 +106,7 @@ export default function JourneyPanel({
 
   const canSearch = to !== null && (from.kind === 'position' || from.station !== null);
   const current = journeys[selected];
+  const tags = journeyTags(journeys);
   const ride = current ? firstRide(current) : null;
 
   return (
@@ -176,7 +184,24 @@ export default function JourneyPanel({
                   onClick={() => choose(i)}
                   className={`flex w-full flex-col gap-1.5 rounded-[10px] border px-3 py-2.5 text-left ${i === selected ? 'border-accent bg-accent-soft' : 'border-border hover:bg-surface-2'}`}
                 >
+                  {tags[i].length > 0 && (
+                    <span className="flex flex-wrap gap-1">
+                      {tags[i].map((t) => (
+                        <span
+                          key={t}
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${t === 'longest' ? 'bg-surface-2 text-muted' : 'bg-accent-soft text-accent'}`}
+                        >
+                          {TAG_LABELS[t]}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   <span className="font-mono text-[13px] text-text">{journeySummary(j)}</span>
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-2">
+                    <span>{fareLabel(j.fare.amount)} (estimé)</span>
+                    <span>· {j.walkMin > 0 ? `${j.walkMin} min à pied` : 'sans marche'}</span>
+                    {extraMinutes(j, journeys) && <span>· {extraMinutes(j, journeys)}</span>}
+                  </span>
                   <span className="flex flex-wrap items-center gap-1">
                     {j.legs
                       .filter((l) => !l.walk && l.line)
@@ -223,6 +248,12 @@ export default function JourneyPanel({
             )}
             <li className="py-2 text-sm font-semibold">
               Arrivée {timeLabel(current.arrive)} à {to?.name}
+            </li>
+            <li className="text-xs text-muted">
+              Prix estimé : {fareLabel(current.fare.amount)}
+              {current.fare.tickets.length > 0 &&
+                ` (ticket ${current.fare.tickets.join(' + ticket ')})`}
+              , plein tarif à l’unité ; forfaits Navigo non pris en compte.
             </li>
           </ol>
         )}
