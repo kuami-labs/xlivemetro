@@ -16,3 +16,6 @@ apps/*/CLAUDE.md
 # Réglages personnels de Claude Code
 .claude/settings.local.json
 CLAUDE.local.md
+# Client Prisma généré (prisma generate)
+packages/db/src/generated/
+.cache/

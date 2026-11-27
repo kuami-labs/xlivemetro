@@ -18,7 +18,7 @@
 
 - Prisma ne connaît pas les types PostGIS : colonnes déclarées `Unsupported("geography(...)")`, requêtes spatiales en SQL brut (`$queryRaw`) ou en Go (pgx).
 - La distance le long du tracé (`shape_dist_traveled`, calculée à l'import si absente) permet au service Go d'interpoler sans calcul géométrique à chaque cycle.
-- `stop_times` est la plus grosse table (plusieurs millions de lignes) : import par `COPY`, jamais par Prisma.
+- `stop_times` est la plus grosse table (~2 millions de lignes) : import par `COPY` (pgx), jamais par Prisma.
 
 ## Redis
 
@@ -32,6 +32,7 @@
 
 ## Migrations et données
 
-- `pnpm db:migrate` : migrations Prisma (dont `CREATE EXTENSION postgis, pg_trgm`).
-- `pnpm gtfs:import` : référentiel réel (téléchargement IDFM).
-- `pnpm db:seed` : référentiel réduit inclus dans `fixtures/` (quelques lignes), cohérent avec le rejeu ; aucun téléchargement.
+- `pnpm db:migrate` : migrations Prisma (dont `CREATE EXTENSION postgis, pg_trgm` et les index GiST et trigrammes).
+- `pnpm gtfs:import` : référentiel réel (téléchargement du GTFS IDFM, ~100 s), par l'outil Go `services/realtime/cmd/gtfsimport` ([ADR 0012](adr/0012-import-gtfs-go.md)). Tout est remplacé dans une transaction.
+- `pnpm db:seed` : même import depuis `fixtures/gtfs-mini` (métro 1 et 14, RER A, T3a ; ~3 s), aucun téléchargement.
+- `pnpm --filter @xlivemetro/realtime gtfs:mini` : régénère le jeu réduit ([fixtures/README.md](../fixtures/README.md)).

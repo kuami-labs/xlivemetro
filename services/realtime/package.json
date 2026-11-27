@@ -7,6 +7,8 @@
     "dev": "sh -c 'if [ -f ../../.env ]; then set -a; . ../../.env; set +a; fi; exec go run ./cmd/realtime'",
     "build": "go build -o dist/realtime ./cmd/realtime",
     "lint": "go vet ./... && test -z \"$(gofmt -l .)\"",
-    "test": "go test -race ./..."
+    "test": "go test -race ./...",
+    "gtfs:import": "sh -c 'if [ -f ../../.env ]; then set -a; . ../../.env; set +a; fi; exec go run ./cmd/gtfsimport \"$@\"' gtfsimport",
+    "gtfs:mini": "go run ./cmd/gtfsmini"
   }
 }

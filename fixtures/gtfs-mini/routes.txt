@@ -1,0 +1,5 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color,route_sort_order
+IDFM:C01371,IDFM:Operator_100,1,1,1,FFBE00,000000,0
+IDFM:C01384,IDFM:Operator_100,14,14,1,640082,FFFFFF,0
+IDFM:C01391,IDFM:Operator_100,T3a,T3a,0,FF5A00,000000,0
+IDFM:C01742,IDFM:71,A,A,2,FF1400,FFFFFF,0

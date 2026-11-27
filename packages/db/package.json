@@ -1,0 +1,28 @@
+{
+  "name": "@xlivemetro/db",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "reset": "prisma migrate reset --force && pnpm --filter @xlivemetro/db seed",
+    "seed": "pnpm --filter @xlivemetro/realtime gtfs:import --source ../../fixtures/gtfs-mini",
+    "gtfs:import": "pnpm --filter @xlivemetro/realtime gtfs:import",
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "prisma": "7.10.1"
+  }
+}
