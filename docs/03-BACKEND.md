@@ -13,16 +13,17 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## Service `realtime` (Go)
 
-| Package                          | Rôle                                                                                                                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `internal/feed`                  | Interface `Source` : `synthetic` (généré depuis le référentiel, ADR 0011), `replay` (réponses enregistrées) ou `prim` (appels réels). Choix par `FEED_SOURCE`            |
-| `internal/ingest`                | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)                                                       |
-| `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                   |
-| `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique |
-| `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                             |
-| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par ligne, instantané puis différences en Protocol Buffers (ADR 0013)                                                |
-| `internal/app`                   | Assemblage : chargement du référentiel, cycle d'ingestion (`FEED_INTERVAL`), calcul et diffusion toutes les 5 s, changement de jour                                      |
-| `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                    |
+| Package                          | Rôle                                                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `internal/feed`                  | Interface `Source` : `synthetic` (généré depuis le référentiel, ADR 0011), `replay` (réponses enregistrées) ou `prim` (appels réels). Choix par `FEED_SOURCE`                                     |
+| `internal/ingest`                | Interroge la source toutes les `FEED_INTERVAL` (30 s par défaut), décode le SIRI Lite (JSON), normalise (ADR 0010)                                                                                |
+| `internal/siri`                  | Décodage du SIRI Lite, conversion des identifiants `STIF:…` ↔ `IDFM:…`                                                                                                                            |
+| `internal/ref`, `internal/refdb` | Référentiel du moment (veille + jour, horaires absolus) relu depuis PostgreSQL ; rapprochement d'une course SIRI avec sa course GTFS par ligne, arrêt et heure théorique                          |
+| `internal/journey`               | Moteur d'itinéraire RAPTOR (ADR 0018) : courses du jour regroupées par parcours, correspondances `transfers.txt`, horaires estimés ; jusqu'à 3 itinéraires non dominés, 4 correspondances au plus |
+| `internal/position`              | Calcule la position estimée de chaque course : horaires + retard → segment entre deux arrêts → point sur le tracé (`shapes`)                                                                      |
+| `internal/hub`                   | Connexions WebSocket, abonnement par zone (bbox) et par ligne, instantané puis différences en Protocol Buffers (ADR 0013)                                                                         |
+| `internal/app`                   | Assemblage : chargement du référentiel, cycle d'ingestion (`FEED_INTERVAL`), calcul et diffusion toutes les 5 s, changement de jour                                                               |
+| `internal/recorder`              | Enregistre les réponses PRIM brutes (outil `cmd/record`) pour créer des jeux de rejeu                                                                                                             |
 
 **Messages WebSocket** (définis dans `packages/proto/realtime.proto`) :
 
