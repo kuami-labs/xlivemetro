@@ -72,8 +72,18 @@ func run() error {
 		return fmt.Errorf("FEED_SOURCE inconnu : %q", name)
 	}
 
+	// Décalage d'horloge pour le développement et les démos (ex. « 8h » la nuit) ; refusé avec PRIM
+	offset, err := time.ParseDuration(env("CLOCK_OFFSET", "0s"))
+	if err != nil {
+		return fmt.Errorf("CLOCK_OFFSET : %w", err)
+	}
+	if offset != 0 && src.Name() == "prim" {
+		return errors.New("CLOCK_OFFSET est réservé aux sources synthetic et replay")
+	}
+	now := func() time.Time { return time.Now().Add(offset) }
+
 	h := hub.New(src.Name(), origins(env("WEB_URL", "http://localhost:3000")))
-	a := app.New(app.Config{FeedInterval: interval, Tick: 5 * time.Second}, f, src, h, time.Now)
+	a := app.New(app.Config{FeedInterval: interval, Tick: 5 * time.Second}, f, src, h, now)
 	go a.Run(ctx)
 
 	srv := &http.Server{Addr: ":" + env("REALTIME_PORT", "4100"), Handler: a.Routes(), ReadHeaderTimeout: 5 * time.Second}
