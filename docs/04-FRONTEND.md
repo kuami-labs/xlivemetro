@@ -10,7 +10,7 @@
 | `/lignes`   | liste des lignes et leur état (rendu serveur, utile au référencement)                                                |
 | `/a-propos` | sources, licences IDFM et OSM, fonctionnement des positions estimées, MCP                                            |
 
-Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'outil `map_link` du MCP.
+Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'outil `map_link` du MCP. Exception : tant que la position du visiteur est affichée (« Autour de moi »), la vue n'est pas écrite dans l'URL, car elle est centrée sur lui.
 
 ## Couches de la carte
 
@@ -35,17 +35,18 @@ Toute vue de la carte est **partageable** par son URL : c'est ce que produit l'o
 
 ## Composants
 
-| Composant                                         | Rôle                                                                                             |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `LiveMap`                                         | MapLibre + `MapboxOverlay` deck.gl, sélection au clic, caméra qui suit un train, URL partageable |
-| `RealtimeClient`                                  | WebSocket, reconnexion avec back-off, Web Worker de décodage                                     |
-| `StationPanel`                                    | fiche d'une gare : lignes, prochains départs (rafraîchis toutes les 30 s), favori                |
-| `VehiclePanel`                                    | fiche d'un train suivi                                                                           |
-| `ModeFilter`, `SearchBox`, `RepresentationPicker` | filtre par mode, recherche (Ctrl+K) et favoris, représentation des trains                        |
-| `ViewControls`, `Legend`, `StatusBar`             | zoom, nord, inclinaison 2D/3D ; légende du retard ; état du temps réel                           |
-| `DisruptionBadge`                                 | état d'une ligne, message en texte brut                                                          |
-| `FreshnessIndicator`                              | âge des données, « estimé » / « théorique »                                                      |
-| `Attribution`                                     | mentions IDFM, OSM, tuiles                                                                       |
+| Composant                                         | Rôle                                                                                                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LiveMap`                                         | MapLibre + `MapboxOverlay` deck.gl, sélection au clic, caméra qui suit un train, URL partageable                                                                                    |
+| `RealtimeClient`                                  | WebSocket, reconnexion avec back-off, Web Worker de décodage                                                                                                                        |
+| `StationPanel`                                    | fiche d'une gare : lignes, prochains départs (rafraîchis toutes les 30 s), favori                                                                                                   |
+| `VehiclePanel`                                    | fiche d'un train suivi                                                                                                                                                              |
+| `ModeFilter`, `SearchBox`, `RepresentationPicker` | filtre par mode, recherche (Ctrl+K) et favoris, représentation des trains                                                                                                           |
+| `ViewControls`, `Legend`, `StatusBar`             | zoom, nord, inclinaison 2D/3D ; légende du retard ; état du temps réel                                                                                                              |
+| `NearbyPanel`                                     | « Autour de moi » (F11) : gares à moins de 1,5 km calculées dans le navigateur (`lib/nearby.ts`), temps de marche, 3 prochains départs ; position jamais envoyée ni mise dans l'URL |
+| `DisruptionBadge`                                 | état d'une ligne, message en texte brut                                                                                                                                             |
+| `FreshnessIndicator`                              | âge des données, « estimé » / « théorique »                                                                                                                                         |
+| `Attribution`                                     | mentions IDFM, OSM, tuiles                                                                                                                                                          |
 
 ## Accessibilité
 

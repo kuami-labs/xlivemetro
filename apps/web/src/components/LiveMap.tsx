@@ -12,6 +12,7 @@ import { api, type Line, type Mode } from '@/lib/api';
 import { hexToRgba, type RGBA } from '@/lib/colors';
 import { ATTRIBUTION, API_URL, INITIAL_VIEW, REALTIME_URL } from '@/lib/config';
 import { loadFavorites, type Favorite } from '@/lib/favorites';
+import { geolocationMessage, nearbyStations, type StationPoint } from '@/lib/nearby';
 import { MAP_THEMES } from '@/lib/mapTheme';
 import type { WorkerIn, WorkerOut } from '@/lib/realtime.worker';
 import {
@@ -38,6 +39,7 @@ import Legend from './Legend';
 import ModeFilter from './ModeFilter';
 import RepresentationPicker from './RepresentationPicker';
 import SearchBox from './SearchBox';
+import NearbyPanel, { type NearbyState } from './NearbyPanel';
 import StationPanel from './StationPanel';
 import StatusBar from './StatusBar';
 import VehiclePanel from './VehiclePanel';
@@ -58,7 +60,7 @@ interface Status {
 interface StationFeature {
   id: string;
   geometry: { coordinates: [number, number] };
-  properties: { id: string; name: string };
+  properties: { id: string; name: string; lines: string[] };
 }
 
 interface LineFeature {
@@ -115,6 +117,9 @@ export default function LiveMap() {
   const subscribeRef = useRef<() => void>(() => {});
   const rebuildRef = useRef<() => void>(() => {});
   const restyleRef = useRef<() => void>(() => {});
+  // Position du visiteur : en mémoire seulement, jamais envoyée ni mise dans l'URL (PRD)
+  const positionRef = useRef<{ lon: number; lat: number; accuracy: number } | null>(null);
+  const stationPointsRef = useRef<StationPoint[]>([]);
 
   // Composant rendu seulement dans le navigateur (ssr: false) : URL et localStorage lisibles
   const [status, setStatus] = useState<Status>({
@@ -135,6 +140,8 @@ export default function LiveMap() {
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
   const [pitch, setPitch] = useState(INITIAL_VIEW.pitch);
   const [zoom, setZoom] = useState(INITIAL_VIEW.zoom);
+  const [nearby, setNearby] = useState<NearbyState | null>(null);
+  const [linesByName, setLinesByName] = useState<Map<string, Line>>(new Map());
 
   const select = useCallback((s: Selection) => {
     selectionRef.current = s;
@@ -146,13 +153,17 @@ export default function LiveMap() {
     const map = mapRef.current;
     if (!map) return;
     const c = map.getCenter();
-    const p = new URLSearchParams({
-      lat: c.lat.toFixed(5),
-      lng: c.lng.toFixed(5),
-      zoom: map.getZoom().toFixed(2),
-      pitch: map.getPitch().toFixed(0),
-      bearing: map.getBearing().toFixed(0),
-    });
+    // Position du visiteur affichée : la vue (centrée sur lui) ne va pas dans l'URL, qui
+    // se partage (PRD, « Confidentialité de la position »)
+    const p = positionRef.current
+      ? new URLSearchParams()
+      : new URLSearchParams({
+          lat: c.lat.toFixed(5),
+          lng: c.lng.toFixed(5),
+          zoom: map.getZoom().toFixed(2),
+          pitch: map.getPitch().toFixed(0),
+          bearing: map.getBearing().toFixed(0),
+        });
     const s = selectionRef.current;
     if (s) p.set(s.kind === 'station' ? 'stop' : 'follow', s.id);
     if (modesRef.current.size < ALL_MODES.length) p.set('mode', [...modesRef.current].join(','));
@@ -325,6 +336,14 @@ export default function LiveMap() {
       ),
     ]).then(([lines, lg, sg]) => {
       linesRef.current = lines;
+      setLinesByName(new Map(lines.map((l) => [l.shortName, l])));
+      stationPointsRef.current = sg.features.map((f) => ({
+        id: f.properties.id,
+        name: f.properties.name,
+        lon: f.geometry.coordinates[0],
+        lat: f.geometry.coordinates[1],
+        lines: f.properties.lines,
+      }));
       lineColors = new Map(lines.map((l) => [l.id, hexToRgba(l.color)]));
       lineModes = new Map(lines.map((l) => [l.id, l.mode]));
       linesGeo = lg;
@@ -465,6 +484,37 @@ export default function LiveMap() {
       ];
     }
 
+    // Marqueur « vous êtes ici » et cercle de précision
+    function positionLayers(): Layer[] {
+      const p = positionRef.current;
+      if (!p) return [];
+      const accent: RGBA = themeRef.current === 'dark' ? [34, 211, 238, 255] : [14, 116, 144, 255];
+      return [
+        new ScatterplotLayer({
+          id: 'moi-precision',
+          data: [p],
+          getPosition: (d: typeof p) => [d.lon, d.lat],
+          getRadius: (d: typeof p) => Math.min(d.accuracy, 500),
+          radiusUnits: 'meters',
+          getFillColor: [accent[0], accent[1], accent[2], 40],
+          getLineColor: [accent[0], accent[1], accent[2], 120],
+          stroked: true,
+          lineWidthMinPixels: 1,
+        }),
+        new ScatterplotLayer({
+          id: 'moi',
+          data: [p],
+          getPosition: (d: typeof p) => [d.lon, d.lat],
+          getRadius: 8,
+          radiusUnits: 'pixels',
+          getFillColor: accent,
+          getLineColor: [255, 255, 255, 255],
+          stroked: true,
+          lineWidthMinPixels: 3,
+        }),
+      ];
+    }
+
     function render(t: number) {
       if (frame) {
         interpolate(frame, reduceMotion ? frame.receivedAt : performance.now(), positions);
@@ -481,7 +531,9 @@ export default function LiveMap() {
             });
           }
         }
-        overlay.setProps({ layers: [...staticLayers, ...trainLayers(frame, t)] });
+        overlay.setProps({
+          layers: [...staticLayers, ...trainLayers(frame, t), ...positionLayers()],
+        });
       }
       raf = requestAnimationFrame(render);
     }
@@ -602,6 +654,40 @@ export default function LiveMap() {
     restyleRef.current();
   };
 
+  // « Autour de moi » (F11) : position demandée au navigateur, gares proches calculées ici
+  const locate = () => {
+    select(null);
+    syncUrl();
+    if (!('geolocation' in navigator)) {
+      setNearby({ status: 'error', message: geolocationMessage(0) });
+      return;
+    }
+    setNearby({ status: 'locating' });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon, accuracy } = pos.coords;
+        positionRef.current = { lon, lat, accuracy };
+        syncUrl();
+        setNearby({
+          status: 'ready',
+          stations: nearbyStations(stationPointsRef.current, lat, lon),
+        });
+        mapRef.current?.flyTo({ center: [lon, lat], zoom: Math.max(mapRef.current.getZoom(), 15) });
+      },
+      (err) => {
+        positionRef.current = null;
+        setNearby({ status: 'error', message: geolocationMessage(err.code) });
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
+    );
+  };
+
+  const closeNearby = () => {
+    setNearby(null);
+    positionRef.current = null;
+    syncUrl();
+  };
+
   const close = () => {
     select(null);
     syncUrl();
@@ -618,6 +704,20 @@ export default function LiveMap() {
 
       <div className="absolute inset-x-3 top-3 z-20 flex flex-wrap items-start gap-2 sm:inset-x-5 sm:top-5 sm:gap-3">
         <SearchBox favorites={favorites} onSelect={goToStation} />
+        <div className="rounded-xl border border-border bg-overlay backdrop-blur">
+          <IconButton label="Autour de moi" pressed={nearby !== null} onClick={locate}>
+            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" strokeWidth="2" />
+              <circle cx="10" cy="10" r="1.8" fill="currentColor" />
+              <path
+                d="M10 1 V4 M10 16 V19 M1 10 H4 M16 10 H19"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </IconButton>
+        </div>
         <div className="hidden sm:block">
           <ModeFilter modes={modes} onChange={changeModes} />
         </div>
@@ -662,6 +762,15 @@ export default function LiveMap() {
         onNorth={() => mapRef.current?.easeTo({ bearing: 0 })}
       />
 
+      {nearby && !selection && (
+        <NearbyPanel
+          state={nearby}
+          lines={linesByName}
+          onStation={goToStation}
+          onRetry={locate}
+          onClose={closeNearby}
+        />
+      )}
       {selection?.kind === 'station' && (
         <StationPanel
           key={selection.id}

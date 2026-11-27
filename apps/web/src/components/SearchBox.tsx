@@ -58,7 +58,7 @@ export default function SearchBox({
   const showFavorites = short && favorites.length > 0;
 
   return (
-    <div className="relative w-full sm:w-[380px]">
+    <div className="relative min-w-0 flex-1 sm:w-[380px] sm:flex-none">
       <div className="flex h-12 items-center gap-2.5 rounded-xl border border-border bg-overlay pr-2 pl-2.5 backdrop-blur focus-within:outline-2 focus-within:outline-accent">
         <Logo />
         <label htmlFor="recherche" className="sr-only">
