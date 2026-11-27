@@ -40,20 +40,24 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 ## API (NestJS, `apps/api`)
 
-| Méthode | Route                   | Rôle                                                           |
-| ------- | ----------------------- | -------------------------------------------------------------- |
-| GET     | `/health`               | état : base, Redis, âge du dernier cycle temps réel            |
-| GET     | `/lines?mode=`          | lignes, couleurs officielles, tracés simplifiés (GeoJSON)      |
-| GET     | `/lines/:id`            | détail, arrêts ordonnés, perturbations en cours                |
-| GET     | `/stops/search?q=`      | recherche floue de gares (`pg_trgm`)                           |
-| GET     | `/stops/:id`            | détail d'une gare, lignes desservies                           |
-| GET     | `/stops/:id/departures` | prochains passages (SIRI Stop Monitoring, cache Redis 30 s)    |
-| GET     | `/disruptions?line=`    | perturbations en cours                                         |
-| GET     | `/vehicles/:id`         | état d'un train : ligne, destination, retard, prochains arrêts |
+| Méthode | Route                      | Rôle                                                                     |
+| ------- | -------------------------- | ------------------------------------------------------------------------ |
+| GET     | `/health`                  | état : base, service temps réel                                          |
+| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                 |
+| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)             |
+| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                  |
+| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                         |
+| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                    |
+| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                     |
+| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)     |
+| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts |
+| GET     | `/disruptions?line=`       | perturbations en cours (à venir, #15)                                    |
 
-- Tout est **public, en lecture seule**, sans authentification. Limitation de débit par IP (`@nestjs/throttler`).
+- Tout est **public, en lecture seule**, sans authentification. Limitation de débit : 120 requêtes par minute et par IP (`@nestjs/throttler`).
+- Paramètres validés (identifiants `IDFM:…`, recherche de 2 à 64 caractères, mode connu) ; requêtes SQL paramétrées.
+- Le référentiel est gardé en mémoire 1 h ; les prochains départs et l'état des trains viennent du service temps réel (`REALTIME_URL`, réseau interne, ADR 0013).
+- En-têtes `Cache-Control` : 1 h pour le référentiel, 15 s pour les départs, `no-store` pour les trains.
 - Les textes de perturbation IDFM sont renvoyés comme **texte brut** ; jamais de HTML interprété.
-- Documentation OpenAPI générée (`/docs`), utilisée par le MCP.
 
 ## Import GTFS (`packages/db`)
 

@@ -84,7 +84,7 @@ Sources vérifiées le 2026-11-27 : voir [ADR 0010](adr/0010-sources-idfm.md). Q
 
 | Risque                                        | Parade                                                                  |
 | --------------------------------------------- | ----------------------------------------------------------------------- |
-| Quotas PRIM dépassés                          | une seule ingestion côté serveur, cache Redis, intervalle configurable  |
+| Quotas PRIM dépassés                          | une seule ingestion côté serveur, caches, intervalle configurable       |
 | Données temps réel incomplètes pour une ligne | repli sur l'horaire théorique, signalé « théorique »                    |
 | Performances du navigateur                    | données binaires, deck.gl, interpolation côté client, niveau de détail  |
 | Panne de PRIM                                 | dernier état servi avec son âge affiché ; bascule possible sur le rejeu |

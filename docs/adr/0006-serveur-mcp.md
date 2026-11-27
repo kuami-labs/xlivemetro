@@ -16,7 +16,7 @@ Bonus du projet : permettre à un assistant IA d'interroger le réseau et de ren
 
 ## Décision
 
-Option 1. Le MCP n'a aucun accès direct à PRIM, à la base ni à Redis : il n'utilise que l'API publique, avec les mêmes limites que tout client. Chaque réponse peut inclure un lien profond vers la carte (`map_link`). Publication sur npm via GitHub Actions avec provenance (`npm publish --provenance`).
+Option 1. Le MCP n'a aucun accès direct à PRIM, ni à la base : il n'utilise que l'API publique, avec les mêmes limites que tout client. Chaque réponse peut inclure un lien profond vers la carte (`map_link`). Publication sur npm via GitHub Actions avec provenance (`npm publish --provenance`).
 
 ## Conséquences
 

@@ -163,21 +163,19 @@ func TestLimits(t *testing.T) {
 }
 
 func TestSlowClientDropped(t *testing.T) {
-	h, url := setup(t)
-	c := dial(t, url)
-	read(t, c)
-	// Le client ne lit plus : au-delà de la file d'envoi, il est déconnecté
-	for i := range sendQueue * 4 {
-		v := paris
-		v.Lon = 2.35 + float64(i)/1000
-		h.Update([]position.Vehicle{v}, time.Now(), time.Now())
+	// File pleine : le message suivant annule la connexion au lieu d'attendre
+	h := New("synthetic", nil)
+	cancelled := false
+	c := &client{send: make(chan []byte, 1), cancel: func() { cancelled = true }, sent: map[string]*pb.Vehicle{}}
+	h.mu.Lock()
+	h.clients[c] = struct{}{}
+	h.mu.Unlock()
+	h.Update([]position.Vehicle{paris}, time.Now(), time.Now())
+	if cancelled {
+		t.Fatal("annulé alors que la file avait de la place")
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if clients, _ := h.Stats(); clients == 0 {
-			return
-		}
-		time.Sleep(20 * time.Millisecond)
+	h.Update([]position.Vehicle{defense}, time.Now(), time.Now())
+	if !cancelled {
+		t.Error("le client lent aurait dû être déconnecté")
 	}
-	t.Error("le client lent aurait dû être déconnecté")
 }

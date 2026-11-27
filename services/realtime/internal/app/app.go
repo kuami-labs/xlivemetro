@@ -7,6 +7,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -169,6 +171,32 @@ func (a *App) Routes() http.Handler {
 			"speed": v.Speed, "delay": v.Delay, "at_stop": v.AtStop, "theoretical": v.Theoretical,
 			"next_stop_id": v.NextStopId, "headsign": v.Headsign,
 		})
+	})
+	// Prochains départs : GET /departures?stops=IDFM:1,IDFM:2&limit=10 (pour l'API)
+	mux.HandleFunc("GET /departures", func(w http.ResponseWriter, r *http.Request) {
+		ids := strings.Split(r.URL.Query().Get("stops"), ",")
+		if len(ids) == 0 || len(ids) > 50 || ids[0] == "" {
+			http.Error(w, "paramètre stops invalide", http.StatusBadRequest)
+			return
+		}
+		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+		if err != nil || limit < 1 || limit > 50 {
+			limit = 10
+		}
+		set := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			set[id] = true
+		}
+		writeJSON(w, a.engine.Departures(set, a.now(), 90*time.Minute, limit))
+	})
+	// Passages restants d'un train : GET /trips/{id}/calls
+	mux.HandleFunc("GET /trips/{id}/calls", func(w http.ResponseWriter, r *http.Request) {
+		calls, ok := a.engine.Calls(r.PathValue("id"), a.now())
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		writeJSON(w, calls)
 	})
 	return mux
 }

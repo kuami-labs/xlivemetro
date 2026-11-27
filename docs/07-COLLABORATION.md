@@ -302,11 +302,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://xlivemetro:xlivemetro@localhost:5432/xlivemetro
-      REDIS_URL: redis://localhost:6379
       FEED_SOURCE: synthetic
     steps:
       - uses: actions/checkout@v7
-      - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db redis
+      - run: docker compose -f compose.yaml -f compose.ci.yaml up -d --build --wait db
       - uses: actions/setup-node@v7
         with: { node-version-file: .nvmrc }
       - uses: actions/setup-go@v7
