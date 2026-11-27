@@ -14,6 +14,23 @@ export interface StationView {
   lines: Line[];
 }
 
+export interface DisruptionView {
+  id: string;
+  channel: string;
+  lines: Line[];
+  /** Texte brut d'IDFM : à afficher comme texte, jamais comme HTML (docs/08-SECURITE.md). */
+  text: string;
+  validUntil: string | null;
+}
+
+interface RealtimeDisruption {
+  id: string;
+  channel: string;
+  line_ids: string[];
+  text: string;
+  valid_until?: string;
+}
+
 export interface DepartureView {
   tripId: string;
   line: Line;
@@ -38,6 +55,7 @@ export class ReferentialService {
   }>(HOUR, 1);
   private readonly shapes = new TtlCache<unknown>(HOUR, 4);
   private readonly departuresCache = new TtlCache<DepartureView[]>(15_000, 2000);
+  private readonly disruptionsCache = new TtlCache<DisruptionView[]>(30_000, 100);
 
   constructor(
     private readonly repo: ReferentialRepository,
@@ -177,6 +195,23 @@ export class ReferentialService {
         expected: iso(c.expected),
       })),
     };
+  }
+
+  /** Perturbations en cours (toutes, ou d'une ligne). */
+  async disruptions(lineId?: string): Promise<DisruptionView[]> {
+    const { lines } = await this.load();
+    if (lineId && !lines.has(lineId)) throw new NotFoundException('ligne inconnue');
+    return this.disruptionsCache.get(lineId ?? 'all', async () => {
+      const qs = lineId ? `?${new URLSearchParams({ line: lineId })}` : '';
+      const ds = (await this.realtime.get<RealtimeDisruption[]>(`/disruptions${qs}`)) ?? [];
+      return ds.map((d) => ({
+        id: d.id,
+        channel: d.channel,
+        lines: d.line_ids.flatMap((id) => lines.get(id) ?? []).sort(byLine),
+        text: d.text,
+        validUntil: d.valid_until ?? null,
+      }));
+    });
   }
 
   async ping(): Promise<{ db: 'ok' | 'error'; realtime: 'ok' | 'degraded' | 'error' }> {

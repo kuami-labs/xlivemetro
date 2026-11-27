@@ -116,3 +116,45 @@ func TestRun(t *testing.T) {
 		t.Errorf("véhicules après Run : %d", vehicles)
 	}
 }
+
+type messages struct{ body string }
+
+func (messages) Name() string { return "prim" }
+func (m messages) Fetch(context.Context, time.Time) ([]byte, error) {
+	if m.body == "" {
+		return nil, &feed.RateLimitError{}
+	}
+	return []byte(m.body), nil
+}
+
+func TestDisruptions(t *testing.T) {
+	a, _ := setup(t, feed.NewSynthetic(nil), time.Date(2026, 12, 8, 8, 0, 0, 0, ref.Paris))
+	a.Disruptions(context.Background()) // sans source : rien
+	a.Messages = messages{body: `{"Siri":{"ServiceDelivery":{"GeneralMessageDelivery":[{"InfoMessage":[
+		{"InfoMessageIdentifier":{"value":"m1"},"Content":{"LineRef":[{"value":"STIF:Line::C1:"}],"Message":[{"MessageText":{"value":"Trafic interrompu"}}]}},
+		{"InfoMessageIdentifier":{"value":"autre"},"Content":{"LineRef":[{"value":"STIF:Line::C999:"}],"Message":[{"MessageText":{"value":"bus"}}]}}]}]}}}`}
+	a.Disruptions(context.Background())
+	get := func(url string) []map[string]any {
+		rec := httptest.NewRecorder()
+		a.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		var out []map[string]any
+		if err := json.NewDecoder(rec.Body).Decode(&out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	if ds := get("/disruptions"); len(ds) != 1 || ds[0]["text"] != "Trafic interrompu" {
+		t.Errorf("perturbations : %v", ds)
+	}
+	if ds := get("/disruptions?line=IDFM:C2"); len(ds) != 0 {
+		t.Errorf("filtre par ligne : %v", ds)
+	}
+	// Erreurs : les derniers messages connus sont gardés
+	a.Messages = messages{}
+	a.Disruptions(context.Background())
+	a.Messages = messages{body: "{"}
+	a.Disruptions(context.Background())
+	if ds := get("/disruptions?line=IDFM:C1"); len(ds) != 1 {
+		t.Errorf("après erreur : %v", ds)
+	}
+}

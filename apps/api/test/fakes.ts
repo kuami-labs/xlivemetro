@@ -74,6 +74,10 @@ export class FakeRealtime {
     if (path.startsWith('/vehicles/IDFM%3AT1')) return Promise.resolve(VEHICLE as T);
     if (path.startsWith('/trips/IDFM%3AT1')) return Promise.resolve([DEPARTURE] as T);
     if (path === '/health') return Promise.resolve({ status: 'ok' } as T);
+    if (path.startsWith('/disruptions'))
+      return Promise.resolve([
+        { id: 'm1', channel: 'Perturbation', line_ids: [RERA.id], text: 'Trafic <b>perturbé</b>' },
+      ] as T);
     return Promise.resolve(null);
   }
 }

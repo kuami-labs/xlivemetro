@@ -34,24 +34,25 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 
 - Une seule instance et une seule boucle d'ingestion (ADR 0013) ; avec plusieurs instances, il faudra un verrou d'ingestion partagé.
 - Respect strict des quotas : intervalle minimal, `Retry-After`, back-off exponentiel.
-- Panne de la source : l'état précédent continue d'être servi, avec son âge (`stale_since`).
+- Panne de la source : l'état précédent continue d'être servi, avec son âge.
+- Messages de perturbation : SIRI Lite General Message toutes les 2 min avec PRIM (`PRIM_GM_URL`) ; **aucun** en mode `synthetic` ou `replay` (on n'invente pas de perturbation). Texte brut, 2 000 caractères au plus, messages expirés ignorés.
 - Le client WebSocket lent est déconnecté (file d'envoi bornée) : il ne ralentit jamais les autres.
-- Endpoints HTTP : `GET /health` (source, âge du dernier cycle, trains, clients ; `degraded` au-delà de 3 cycles sans données), `GET /ws` (WebSocket), `GET /vehicles/{id}` (état d'un train, pour l'API, réseau interne). `GET /metrics` (Prometheus) reste à faire.
+- Endpoints HTTP : `GET /health` (source, âge du dernier cycle, trains, clients ; `degraded` au-delà de 3 cycles sans données), `GET /ws` (WebSocket), `GET /vehicles/{id}`, `GET /departures`, `GET /trips/{id}/calls` et `GET /disruptions` (pour l'API, réseau interne). `GET /metrics` (Prometheus) reste à faire.
 
 ## API (NestJS, `apps/api`)
 
-| Méthode | Route                      | Rôle                                                                     |
-| ------- | -------------------------- | ------------------------------------------------------------------------ |
-| GET     | `/health`                  | état : base, service temps réel                                          |
-| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                 |
-| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)             |
-| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                  |
-| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                         |
-| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                    |
-| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                     |
-| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)     |
-| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts |
-| GET     | `/disruptions?line=`       | perturbations en cours (à venir, #15)                                    |
+| Méthode | Route                      | Rôle                                                                                        |
+| ------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| GET     | `/health`                  | état : base, service temps réel                                                             |
+| GET     | `/lines?mode=`             | lignes : nom, mode, couleurs officielles                                                    |
+| GET     | `/lines/:id`               | détail et gares dans l'ordre (course la plus longue, sens 0)                                |
+| GET     | `/lines.geojson?mode=`     | tracés simplifiés (~5 m), une MultiLineString par ligne                                     |
+| GET     | `/stations.geojson`        | gares desservies et leurs lignes                                                            |
+| GET     | `/stations/search?q=`      | recherche floue, sans accents (`pg_trgm`, `unaccent`)                                       |
+| GET     | `/stations/:id`            | détail d'une gare, lignes desservies                                                        |
+| GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                        |
+| GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                    |
+| GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique) |
 
 - Tout est **public, en lecture seule**, sans authentification. Limitation de débit : 120 requêtes par minute et par IP (`@nestjs/throttler`).
 - Paramètres validés (identifiants `IDFM:…`, recherche de 2 à 64 caractères, mode connu) ; requêtes SQL paramétrées.

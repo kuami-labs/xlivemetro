@@ -12,6 +12,10 @@ import (
 // Paramètres exacts à confirmer avec une clé (documentation réservée aux comptes PRIM).
 const DefaultPrimURL = "https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable?LineRef=ALL"
 
+// DefaultPrimMessagesURL est la requête General Message (messages de perturbation) de PRIM.
+// Paramètres exacts à confirmer avec une clé.
+const DefaultPrimMessagesURL = "https://prim.iledefrance-mobilites.fr/marketplace/general-message?LineRef=ALL"
+
 // Prim interroge l'API PRIM avec la clé de l'instance. La clé ne quitte jamais ce service.
 type Prim struct {
 	URL    string

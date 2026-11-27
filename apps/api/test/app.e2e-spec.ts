@@ -5,7 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { RealtimeClient } from '../src/realtime/realtime.client.js';
 import { ReferentialRepository } from '../src/referential/referential.repository.js';
-import { CDG, FakeRealtime, FakeRepository, M1 } from './fakes.js';
+import { CDG, FakeRealtime, FakeRepository, M1, RERA } from './fakes.js';
 
 describe('API (e2e)', () => {
   let app: INestApplication<App>;
@@ -80,6 +80,19 @@ describe('API (e2e)', () => {
     // Deuxième appel servi par le cache (15 s)
     await request(app.getHttpServer()).get(`/stations/${CDG.id}/departures`).expect(200);
     expect(realtime.paths.filter((p) => p.startsWith('/departures'))).toHaveLength(1);
+  });
+
+  it('GET /disruptions', async () => {
+    const res = await request(app.getHttpServer()).get('/disruptions').expect(200);
+    expect(res.body[0]).toMatchObject({
+      text: 'Trafic <b>perturbé</b>',
+      lines: [{ shortName: 'A' }],
+    });
+    expect(res.body[0].validUntil).toBeNull();
+    await request(app.getHttpServer()).get(`/disruptions?line=${RERA.id}`).expect(200);
+    expect(realtime.paths).toContain('/disruptions?line=IDFM%3AC01742');
+    await request(app.getHttpServer()).get('/disruptions?line=IDFM:inconnue').expect(404);
+    await request(app.getHttpServer()).get('/disruptions?line=pas-un-id').expect(400);
   });
 
   it('GET /vehicles/:id', async () => {

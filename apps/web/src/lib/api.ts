@@ -29,6 +29,14 @@ export interface Departure {
   theoretical: boolean;
 }
 
+export interface Disruption {
+  id: string;
+  channel: string;
+  lines: Line[];
+  text: string;
+  validUntil: string | null;
+}
+
 export interface VehicleDetail {
   id: string;
   line: Line | null;
@@ -51,5 +59,6 @@ export const api = {
   station: (id: string) => get<Station>(`/stations/${encodeURIComponent(id)}`),
   departures: (id: string) => get<Departure[]>(`/stations/${encodeURIComponent(id)}/departures`),
   search: (q: string) => get<Station[]>(`/stations/search?q=${encodeURIComponent(q)}`),
+  disruptions: () => get<Disruption[]>('/disruptions'),
   vehicle: (id: string) => get<VehicleDetail>(`/vehicles/${encodeURIComponent(id)}`),
 };
