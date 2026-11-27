@@ -65,7 +65,7 @@ Ces documents font foi. En cas de contradiction entre eux ou avec une demande, *
 - `pnpm gtfs:import` : importe le référentiel GTFS IDFM
 - `pnpm db:migrate`, `pnpm db:seed`, `pnpm db:reset`
 
-Depuis la session WSL, préfixe-les par `docker compose exec dev`. Hôtes des services (depuis le conteneur) : `db:5432`, `redis:6379`.
+Depuis la session WSL, préfixe-les par `docker compose exec dev`. Hôtes des services (depuis le conteneur) : `db:5432`.
 
 ## Règles de travail
 

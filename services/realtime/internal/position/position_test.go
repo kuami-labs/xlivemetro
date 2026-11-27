@@ -156,3 +156,41 @@ func TestMatchRejects(t *testing.T) {
 		t.Errorf("retard au terminus : %d", tm.arr[2]-e.ref.Trips[0].Calls[2].Arr)
 	}
 }
+
+func TestDeparturesAndCalls(t *testing.T) {
+	e := engine(t)
+	stops := map[string]bool{"IDFM:2": true, "IDFM:3": true}
+	// 07:59 : prochain départ de B à 08:02:30 ; C est un terminus (pas de départ)
+	ds := e.Departures(stops, at(7, 59, 0), time.Hour, 10)
+	if len(ds) != 1 || ds[0].StopID != "IDFM:2" || !ds[0].Theoretical || ds[0].Expected != ds[0].Aimed {
+		t.Fatalf("départs : %+v", ds)
+	}
+	// Avec 2 min de retard annoncées à A
+	e.Apply([]siri.EstimatedVehicleJourney{journey(call("IDFM:1", at(8, 0, 30), 2*time.Minute))}, at(7, 59, 0))
+	ds = e.Departures(stops, at(7, 59, 0), time.Hour, 10)
+	if len(ds) != 1 || ds[0].Theoretical || ds[0].Expected-ds[0].Aimed != 120 {
+		t.Fatalf("départs avec retard : %+v", ds)
+	}
+	// Deux départs (A puis B), triés par heure estimée
+	if ds := e.Departures(map[string]bool{"IDFM:2": true, "IDFM:1": true}, at(7, 59, 0), time.Hour, 10); len(ds) != 2 || ds[0].StopID != "IDFM:1" {
+		t.Errorf("tri : %+v", ds)
+	}
+	if ds := e.Departures(stops, at(7, 59, 0), time.Minute, 10); len(ds) != 0 {
+		t.Errorf("hors fenêtre : %+v", ds)
+	}
+	if ds := e.Departures(stops, at(7, 59, 0), time.Hour, 0); len(ds) != 0 {
+		t.Errorf("limite 0 : %+v", ds)
+	}
+
+	calls, ok := e.Calls("T1@20261207", at(8, 3, 0)) // retard de 2 min : A est passé, B arrive à 08:04
+	if !ok || len(calls) != 2 || calls[0].StopID != "IDFM:2" || calls[1].StopID != "IDFM:3" {
+		t.Fatalf("passages restants : %+v", calls)
+	}
+	e.TTL = 0
+	if calls, _ := e.Calls("T1@20261207", at(8, 1, 0)); !calls[0].Theoretical {
+		t.Error("TTL dépassé : théorique attendu")
+	}
+	if _, ok := e.Calls("inconnue", at(8, 1, 0)); ok {
+		t.Error("course inconnue")
+	}
+}

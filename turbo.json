@@ -9,7 +9,7 @@
     "lint": {},
     "test": {
       "dependsOn": ["^build"],
-      "env": ["DATABASE_URL", "REDIS_URL", "FEED_SOURCE"]
+      "env": ["DATABASE_URL", "FEED_SOURCE"]
     },
     "dev": {
       "dependsOn": ["^build"],

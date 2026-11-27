@@ -10,7 +10,7 @@ XLiveMetro est open source : les contributeurs arrivent sans prévenir, sur des 
 
 Objectif fixé : un nouveau contributeur clone le dépôt et lance la stack en 15 minutes, sans aide. Le mainteneur ne peut pas dépanner chaque installation.
 
-La production tournera sous Debian, avec Node 26 (LTS), Go 1.27, PostgreSQL 19 (PostGIS 3.7) et Redis 8.
+La production tournera sous Debian, avec Node 26 (LTS), Go 1.27, PostgreSQL 19 (PostGIS 3.7).
 
 ## Options
 
@@ -28,9 +28,9 @@ La production tournera sous Debian, avec Node 26 (LTS), Go 1.27, PostgreSQL 19 (
 
 ## Décision
 
-Nous choisissons l'option 1, avec l'image `mcr.microsoft.com/devcontainers/typescript-node:26-trixie` et `compose.yaml` (PostgreSQL 19 + PostGIS, Redis 8) et la feature Go. C'est la seule qui garantit le même environnement sur tous les systèmes sans assistance, au plus près de la production.
+Nous choisissons l'option 1, avec l'image `mcr.microsoft.com/devcontainers/typescript-node:26-trixie` et `compose.yaml` (PostgreSQL 19 + PostGIS) et la feature Go. C'est la seule qui garantit le même environnement sur tous les systèmes sans assistance, au plus près de la production.
 
-Le `compose.yaml` reste utilisable sans VS Code (`docker compose up -d db redis`) pour les contributeurs qui préfèrent un autre éditeur, sans support officiel.
+Le `compose.yaml` reste utilisable sans VS Code (`docker compose up -d db`) pour les contributeurs qui préfèrent un autre éditeur, sans support officiel.
 
 ## Conséquences
 

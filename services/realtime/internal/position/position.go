@@ -3,6 +3,7 @@
 package position
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -210,4 +211,74 @@ func locate(r *ref.Ref, t *ref.Trip, tm *times, ts int64) (Vehicle, bool) {
 	p, bearing := line.At(dist)
 	v.Lat, v.Lon, v.Bearing = p.Lat, p.Lon, bearing
 	return v, true
+}
+
+// Departure est un prochain départ à un arrêt.
+type Departure struct {
+	TripID      string `json:"trip_id"` // course datée
+	RouteID     string `json:"route_id"`
+	Headsign    string `json:"headsign"`
+	StopID      string `json:"stop_id"`
+	Aimed       int64  `json:"aimed"`    // secondes Unix
+	Expected    int64  `json:"expected"` // secondes Unix
+	Theoretical bool   `json:"theoretical"`
+}
+
+// Departures renvoie les prochains départs (horaires estimés, sinon théoriques) depuis les
+// arrêts donnés, dans l'ordre chronologique. Le terminus d'une course n'est pas un départ.
+func (e *Engine) Departures(stops map[string]bool, now time.Time, window time.Duration, limit int) []Departure {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	ts := now.Unix()
+	var out []Departure
+	for _, t := range e.ref.Between(now.Add(-15*time.Minute), now.Add(window)) {
+		tm, ok := e.rt[t.Key]
+		theoretical := !ok || now.Sub(tm.seen) > e.TTL
+		if theoretical {
+			tm = theoreticalTimes(t)
+		}
+		for i := 0; i < len(t.Calls)-1; i++ {
+			c := t.Calls[i]
+			if !stops[c.StopID] || tm.dep[i] < ts || tm.dep[i] > ts+int64(window.Seconds()) {
+				continue
+			}
+			out = append(out, Departure{
+				TripID: t.Key, RouteID: t.RouteID, Headsign: t.Headsign, StopID: c.StopID,
+				Aimed: c.Dep, Expected: tm.dep[i], Theoretical: theoretical,
+			})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Expected < out[j].Expected })
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+// Calls renvoie les passages restants d'une course datée (fiche d'un train).
+func (e *Engine) Calls(key string, now time.Time) ([]Departure, bool) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	for _, t := range e.ref.Trips {
+		if t.Key != key {
+			continue
+		}
+		tm, ok := e.rt[t.Key]
+		theoretical := !ok || now.Sub(tm.seen) > e.TTL
+		if theoretical {
+			tm = theoreticalTimes(t)
+		}
+		var out []Departure
+		for i, c := range t.Calls {
+			if tm.arr[i] < now.Unix() {
+				continue
+			}
+			out = append(out, Departure{
+				TripID: t.Key, RouteID: t.RouteID, Headsign: t.Headsign, StopID: c.StopID,
+				Aimed: c.Arr, Expected: tm.arr[i], Theoretical: theoretical,
+			})
+		}
+		return out, true
+	}
+	return nil, false
 }

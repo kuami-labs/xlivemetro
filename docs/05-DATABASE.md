@@ -20,12 +20,9 @@
 - La distance le long du tracé (`shape_dist_traveled`, calculée à l'import si absente) permet au service Go d'interpoler sans calcul géométrique à chaque cycle.
 - `stop_times` est la plus grosse table (~2 millions de lignes) : import par `COPY` (pgx), jamais par Prisma.
 
-## Redis
+## Cache
 
-| Clé                       | Contenu            | Durée |
-| ------------------------- | ------------------ | ----- |
-| `cache:departures:<stop>` | prochains passages | 30 s  |
-| `cache:disruptions`       | perturbations      | 120 s |
+Pas de Redis en v1 ([ADR 0014](adr/0014-sans-redis-v1.md)) : l'état temps réel vit dans la mémoire du service Go, et l'API garde en mémoire le référentiel (1 h) et les prochains départs (15 s).
 
 ## Migrations et données
 

@@ -74,6 +74,18 @@ func TestCycleTickHealth(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /vehicles : %d", rec.Code)
 	}
+	for url, want := range map[string]int{
+		"/departures?stops=IDFM:2,IDFM:3&limit=5": http.StatusOK,
+		"/departures":              http.StatusBadRequest,
+		"/trips/T1@20261208/calls": http.StatusOK,
+		"/trips/inconnue/calls":    http.StatusNotFound,
+	} {
+		rec = httptest.NewRecorder()
+		a.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		if rec.Code != want {
+			t.Errorf("GET %s : %d, attendu %d", url, rec.Code, want)
+		}
+	}
 	rec = httptest.NewRecorder()
 	a.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/vehicles/inconnu", nil))
 	if rec.Code != http.StatusNotFound {

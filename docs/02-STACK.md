@@ -1,23 +1,23 @@
 # Stack technique – XLiveMetro
 
-La stack reprend celle d'XCadence (TypeScript, NestJS, Next.js, PostgreSQL, Redis, Docker) et ajoute **Go** pour le chemin chaud du temps réel, et **PostGIS** pour la géographie. Décision : [ADR 0002](adr/0002-stack.md).
+La stack reprend celle d'XCadence (TypeScript, NestJS, Next.js, PostgreSQL, Docker), sans Redis en v1 ([ADR 0014](adr/0014-sans-redis-v1.md)), et ajoute **Go** pour le chemin chaud du temps réel, et **PostGIS** pour la géographie. Décision : [ADR 0002](adr/0002-stack.md).
 
-| Couche                            | Choix                                                                                     | Pourquoi                                                                          |
-| --------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Dépôt                             | Monorepo pnpm + Turborepo, plus un module Go                                              | Une seule CI, un seul `pnpm dev`                                                  |
-| Ingestion et diffusion temps réel | **Go** (`services/realtime`) : `net/http`, `coder/websocket`, `encoding/json` (SIRI Lite) | Goroutines pour des milliers de connexions, faible mémoire, binaire unique        |
-| Format temps réel                 | Messages binaires (Protocol Buffers), envoi des différences uniquement                    | Débit minimal, décodage direct vers des typed arrays                              |
-| API REST                          | NestJS (`apps/api`)                                                                       | Référentiel (lignes, arrêts, recherche), prochains passages ; architecture connue |
-| Base de données                   | PostgreSQL 19 + PostGIS 3.7 + Prisma                                                      | Référentiel GTFS, tracés, requêtes spatiales                                      |
-| Cache et bus                      | Redis 8 (cache, pub/sub entre Go et NestJS)                                               | Un seul appel PRIM partagé                                                        |
-| Front                             | Next.js (App Router) + Tailwind + shadcn/ui                                               | Pages rapides, composants prêts                                                   |
-| Carte 3D                          | MapLibre GL JS + deck.gl (`MapboxOverlay`)                                                | Open source, couches 3D animées performantes (WebGL2, WebGPU à venir)             |
-| Fond de carte                     | Tuiles vectorielles OpenFreeMap / OpenMapTiles (OSM)                                      | Gratuit, bâtiments 3D                                                             |
-| État côté front                   | Zustand (état carte) + TanStack Query (REST)                                              | Léger, hors cycle de rendu React pour l'animation                                 |
-| Serveur MCP                       | `@modelcontextprotocol/sdk` (`apps/mcp`), transport stdio, publié sur npm                 | Réutilise l'API publique ; installable partout                                    |
-| Tests                             | Vitest, Supertest, `go test`, Playwright (2 parcours)                                     | Calculs de position couverts à 100 %                                              |
-| CI/CD                             | GitHub Actions ; déploiement à décider (ADR à venir)                                      |                                                                                   |
-| Observabilité                     | Logs JSON (pino côté Node, `log/slog` côté Go)                                            | Même format partout                                                               |
+| Couche                            | Choix                                                                                     | Pourquoi                                                                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Dépôt                             | Monorepo pnpm + Turborepo, plus un module Go                                              | Une seule CI, un seul `pnpm dev`                                                   |
+| Ingestion et diffusion temps réel | **Go** (`services/realtime`) : `net/http`, `coder/websocket`, `encoding/json` (SIRI Lite) | Goroutines pour des milliers de connexions, faible mémoire, binaire unique         |
+| Format temps réel                 | Messages binaires (Protocol Buffers), envoi des différences uniquement                    | Débit minimal, décodage direct vers des typed arrays                               |
+| API REST                          | NestJS (`apps/api`)                                                                       | Référentiel (lignes, arrêts, recherche), prochains passages ; architecture connue  |
+| Base de données                   | PostgreSQL 19 + PostGIS 3.7 + Prisma                                                      | Référentiel GTFS, tracés, requêtes spatiales                                       |
+| Cache                             | En mémoire (API : référentiel 1 h, départs 15 s ; temps réel : service Go)                | Une seule instance de chaque service en v1 ([ADR 0014](adr/0014-sans-redis-v1.md)) |
+| Front                             | Next.js (App Router) + Tailwind + shadcn/ui                                               | Pages rapides, composants prêts                                                    |
+| Carte 3D                          | MapLibre GL JS + deck.gl (`MapboxOverlay`)                                                | Open source, couches 3D animées performantes (WebGL2, WebGPU à venir)              |
+| Fond de carte                     | Tuiles vectorielles OpenFreeMap / OpenMapTiles (OSM)                                      | Gratuit, bâtiments 3D                                                              |
+| État côté front                   | Zustand (état carte) + TanStack Query (REST)                                              | Léger, hors cycle de rendu React pour l'animation                                  |
+| Serveur MCP                       | `@modelcontextprotocol/sdk` (`apps/mcp`), transport stdio, publié sur npm                 | Réutilise l'API publique ; installable partout                                     |
+| Tests                             | Vitest, Supertest, `go test`, Playwright (2 parcours)                                     | Calculs de position couverts à 100 %                                               |
+| CI/CD                             | GitHub Actions ; déploiement à décider (ADR à venir)                                      |                                                                                    |
+| Observabilité                     | Logs JSON (pino côté Node, `log/slog` côté Go)                                            | Même format partout                                                                |
 
 ## Structure du monorepo
 

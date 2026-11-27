@@ -11,7 +11,7 @@ L'environnement est **du code**, versionné avec le projet. Un contributeur n'in
 | --------------------------------- | ------------------------------------------------------------- |
 | `.devcontainer/Dockerfile`        | le système et les outils du poste de travail                  |
 | `.devcontainer/devcontainer.json` | comment VS Code s'y attache : extensions, réglages, commandes |
-| `compose.yaml`                    | les services : PostgreSQL + PostGIS, Redis                    |
+| `compose.yaml`                    | les services : PostgreSQL + PostGIS                           |
 | `.env.example`                    | les variables d'environnement, sans secret                    |
 
 ## Parité dev / prod
@@ -22,13 +22,12 @@ L'environnement est **du code**, versionné avec le projet. Un contributeur n'in
 | Node (LTS)           | 26                                                           | 26                                     |
 | Go                   | 1.27                                                         | 1.27                                   |
 | PostgreSQL + PostGIS | 19 / 3.7                                                     | 19 / 3.7                               |
-| Redis                | 8                                                            | 8                                      |
 | Configuration        | fichier `.env` local                                         | variables d'environnement (Coolify)    |
 | Flux temps réel      | flux synthétique (`FEED_SOURCE=synthetic`) ou votre clé PRIM | PRIM, clé de l'instance                |
 | Données              | référentiel réduit (`pnpm db:seed`)                          | GTFS IDFM complet (`pnpm gtfs:import`) |
 | Rechargement à chaud | oui                                                          | non                                    |
 
-Les six premières lignes sont **identiques**. Les autres diffèrent **exprès**.
+Les cinq premières lignes sont **identiques**. Les autres diffèrent **exprès**.
 
 ## Prérequis
 
@@ -166,6 +165,8 @@ services:
       context: .
       dockerfile: .devcontainer/Dockerfile
     command: sleep infinity
+    # Un vrai processus init (tini) : récupère les processus terminés lancés par « docker compose exec »
+    init: true
     # Les commandes « docker compose exec dev … » tournent comme dans VS Code
     user: node
     working_dir: /workspace
@@ -178,8 +179,6 @@ services:
       - .:/workspace:cached
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   db:
@@ -198,20 +197,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-
-  redis:
-    image: redis:8
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 10
 ```
 
-- **Le nom du service est le nom d'hôte** : depuis `dev`, la base est `db:5432`, Redis `redis:6379`.
+- **Le nom du service est le nom d'hôte** : depuis `dev`, la base est `db:5432`.
 - **Identifiants de dev** (`xlivemetro` / `xlivemetro`) : ce ne sont pas des secrets.
-- **`healthcheck` + `depends_on`** : le poste de travail attend que la base et Redis soient prêts.
-- Avant la première release, figez chaque image sur une version précise (`redis:8.x.y`, `postgres:19.x` dans `db/Dockerfile`).
+- **`healthcheck` + `depends_on`** : le poste de travail attend que la base soit prête.
+- Avant la première release, figez chaque image sur une version précise (`postgres:19.x` dans `db/Dockerfile`).
 
 ### db/Dockerfile
 
@@ -230,14 +221,12 @@ Les extensions (`postgis`, `pg_trgm`) sont créées par la première migration P
 
 ### compose.ci.yaml
 
-En CI, la base et Redis sont publiés sur `localhost` pour les tests lancés sur le runner :
+En CI, la base est publiée sur `localhost` pour les tests lancés sur le runner :
 
 ```yaml
 services:
   db:
     ports: ['5432:5432']
-  redis:
-    ports: ['6379:6379']
 ```
 
 ### .nvmrc
@@ -253,14 +242,15 @@ Lu par `actions/setup-node` en CI ; le dev container fixe la même version.
 ```bash
 # Copié en .env à la création du conteneur. Le .env n'est JAMAIS commité.
 
-# Base et cache (services du compose.yaml)
+# Base de données (service du compose.yaml)
 DATABASE_URL=postgres://xlivemetro:xlivemetro@db:5432/xlivemetro
-REDIS_URL=redis://redis:6379
 
 # Ports
 API_PORT=4000
 REALTIME_PORT=4100
 WEB_URL=http://localhost:3000
+# Service temps réel vu par l'API (réseau interne)
+REALTIME_URL=http://localhost:4100
 # Adresses vues par le navigateur
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_REALTIME_URL=ws://localhost:4100/ws
@@ -397,8 +387,7 @@ go version       # go1.27…
 pnpm -v          # version de packageManager
 psql --version   # 19…
 psql $DATABASE_URL -c "SELECT 1"
-redis-cli -u $REDIS_URL ping     # PONG (si redis-tools est installé)
-curl http://localhost:4000/health   # {"status":"ok","db":"ok","redis":"ok"}
+curl http://localhost:4000/health   # {"status":"ok","db":"ok","realtime":"ok"}
 curl http://localhost:4100/health   # {"status":"ok","source":"replay","last_cycle_age_s":…}
 ```
 
