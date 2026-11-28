@@ -1,5 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
-import { gtfsId, optionalMode, searchQuery, stationPoints, tripKey } from './validation.js';
+import {
+  addressQuery,
+  gtfsId,
+  optionalMode,
+  searchQuery,
+  stationPoints,
+  tripKey,
+} from './validation.js';
 
 describe('validation', () => {
   it('accepte les identifiants IDFM et refuse le reste', () => {
@@ -42,6 +49,13 @@ describe('validation', () => {
       'IDFM:1,IDFM:2,IDFM:3,IDFM:4,IDFM:5,IDFM:6',
     ]) {
       expect(() => stationPoints(bad)).toThrow(BadRequestException);
+    }
+  });
+
+  it('valide une adresse', () => {
+    expect(addressQuery('  20  avenue de Ségur ')).toBe('20 avenue de Ségur');
+    for (const bad of [undefined, 'ab', 'x'.repeat(121), 'rue\u0000x', ['rue de Rivoli']]) {
+      expect(() => addressQuery(bad)).toThrow(BadRequestException);
     }
   });
 });

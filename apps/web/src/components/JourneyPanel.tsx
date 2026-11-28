@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api, type Journey, type Station, type StationWalk } from '@/lib/api';
+import { api, type Journey, type Place, type Station, type StationWalk } from '@/lib/api';
 import { timeLabel } from '@/lib/format';
 import {
   extraMinutes,
@@ -12,11 +12,13 @@ import {
   TAG_LABELS,
 } from '@/lib/journeyFormat';
 import { geolocationMessage, nearbyStations, type StationPoint } from '@/lib/nearby';
+import AddressPicker from './AddressPicker';
 import LineBadge from './LineBadge';
 import Panel from './Panel';
 import StationPicker from './StationPicker';
 
 type From = { kind: 'position' } | { kind: 'station'; station: Station | null };
+type To = { kind: 'station'; station: Station | null } | { kind: 'address'; place: Place | null };
 
 /**
  * Itinéraire métro/RER/tram (F12, F13). Depuis « ma position », les gares proches sont
@@ -30,14 +32,15 @@ export default function JourneyPanel({
   onClose,
 }: {
   stationPoints: () => StationPoint[];
-  onPreview: (j: Journey | null) => void;
+  /** Itinéraire à tracer ; destination = adresse choisie (marche finale tracée) */
+  onPreview: (j: Journey | null, destination: Place | null) => void;
   onBoard: (tripId: string, destinationId: string | null) => void;
   /** Position obtenue (affichée sur la carte, jamais envoyée) */
   onPosition: (p: { lat: number; lon: number; accuracy: number } | null) => void;
   onClose: () => void;
 }) {
   const [from, setFrom] = useState<From>({ kind: 'position' });
-  const [to, setTo] = useState<Station | null>(null);
+  const [to, setTo] = useState<To>({ kind: 'station', station: null });
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [journeys, setJourneys] = useState<Journey[]>([]);
@@ -46,7 +49,7 @@ export default function JourneyPanel({
   const show = (js: Journey[]) => {
     setJourneys(js);
     setSelected(0);
-    onPreview(js[0] ?? null);
+    onPreview(js[0] ?? null, destination);
     setStatus('done');
     setMessage(
       js.length === 0
@@ -55,10 +58,28 @@ export default function JourneyPanel({
     );
   };
 
+  const destination = to.kind === 'address' ? to.place : null;
+  const destName = to.kind === 'station' ? to.station?.name : to.place?.label;
+
+  // Gares d'arrivée : la gare choisie, ou celles à moins de 1,5 km de l'adresse (calculées ici)
+  const targets = (): StationWalk[] => {
+    if (to.kind === 'station') return to.station ? [{ id: to.station.id, walkSec: 0 }] : [];
+    if (!to.place) return [];
+    return nearbyStations(stationPoints(), to.place.lat, to.place.lon).map((s) => ({
+      id: s.id,
+      walkSec: s.walkMin * 60,
+    }));
+  };
+
   const search = async (origins: StationWalk[]) => {
-    if (!to) return;
+    const dest = targets();
+    if (dest.length === 0) {
+      setStatus('error');
+      setMessage('Aucune gare de métro, RER ou tram à moins de 1,5 km de cette adresse.');
+      return;
+    }
     try {
-      show(await api.journeys(origins, [{ id: to.id, walkSec: 0 }]));
+      show(await api.journeys(origins, dest));
     } catch {
       setStatus('error');
       setMessage('Calcul impossible pour le moment. Réessayez.');
@@ -66,7 +87,7 @@ export default function JourneyPanel({
   };
 
   const run = () => {
-    if (!to) return;
+    if (!canSearch) return;
     setStatus('loading');
     setMessage('');
     if (from.kind === 'station') {
@@ -101,10 +122,11 @@ export default function JourneyPanel({
 
   const choose = (i: number) => {
     setSelected(i);
-    onPreview(journeys[i] ?? null);
+    onPreview(journeys[i] ?? null, destination);
   };
 
-  const canSearch = to !== null && (from.kind === 'position' || from.station !== null);
+  const hasTo = to.kind === 'station' ? to.station !== null : to.place !== null;
+  const canSearch = hasTo && (from.kind === 'position' || from.station !== null);
   const current = journeys[selected];
   const tags = journeyTags(journeys);
   const ride = current ? firstRide(current) : null;
@@ -154,12 +176,47 @@ export default function JourneyPanel({
           )}
         </fieldset>
 
-        <StationPicker
-          label="Arrivée"
-          placeholder="Rechercher une gare"
-          value={to}
-          onChange={setTo}
-        />
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-xs text-muted">Arrivée</legend>
+          <div className="flex gap-1.5">
+            {(
+              [
+                ['station', 'Une gare'],
+                ['address', 'Une adresse'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={to.kind === k}
+                onClick={() =>
+                  setTo(
+                    k === 'station'
+                      ? { kind: 'station', station: null }
+                      : { kind: 'address', place: null },
+                  )
+                }
+                className={`h-9 flex-1 rounded-lg text-sm font-semibold ${to.kind === k ? 'bg-accent text-on-accent' : 'border border-border text-muted hover:text-text'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {to.kind === 'station' ? (
+            <StationPicker
+              label="Gare d’arrivée"
+              placeholder="Rechercher une gare"
+              value={to.station}
+              onChange={(s) => setTo({ kind: 'station', station: s })}
+            />
+          ) : (
+            <AddressPicker
+              label="Adresse d’arrivée"
+              value={to.place}
+              onChange={(p) => setTo({ kind: 'address', place: p })}
+            />
+          )}
+        </fieldset>
 
         <button
           type="button"
@@ -246,8 +303,13 @@ export default function JourneyPanel({
                 </li>
               ),
             )}
+            {current.walkEndMin > 0 && (
+              <li className="border-b border-divider py-2 text-sm text-text-2">
+                {current.walkEndMin} min à pied jusqu’à {destName}
+              </li>
+            )}
             <li className="py-2 text-sm font-semibold">
-              Arrivée {timeLabel(current.arrive)} à {to?.name}
+              Arrivée {timeLabel(current.arrive)} à {destName}
             </li>
             <li className="text-xs text-muted">
               Prix estimé : {fareLabel(current.fare.amount)}

@@ -109,3 +109,20 @@ export class FakeRealtime {
     return Promise.resolve(null);
   }
 }
+
+export class FakeGeocoder {
+  queries: string[] = [];
+  search(q: string) {
+    this.queries.push(q);
+    return Promise.resolve([
+      {
+        geometry: { type: 'Point', coordinates: [2.3086, 48.8507] },
+        properties: { label: '20 Avenue de Ségur 75007 Paris', citycode: '75107' },
+      },
+      {
+        geometry: { type: 'Point', coordinates: [4.83, 45.76] },
+        properties: { label: 'Avenue de Ségur 69000 Lyon', citycode: '69123' },
+      },
+    ]);
+  }
+}

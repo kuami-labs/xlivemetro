@@ -54,6 +54,7 @@ PostgreSQL + PostGIS : référentiel GTFS (lu par realtime et api)
 | GET     | `/stations/:id/departures` | prochains départs de tous ses quais (service temps réel, cache 15 s)                                                                                                                                     |
 | GET     | `/vehicles/:id`            | état d'un train : ligne, destination, retard, position, prochains arrêts                                                                                                                                 |
 | GET     | `/trips/:id`               | course suivie par un voyageur (F15) : arrêts restants même avant le départ, position du train s'il roule                                                                                                 |
+| GET     | `/geocode?q=`              | adresses d'Île-de-France (F17) : relais vers le géocodage de l'IGN (`GEOCODER_URL`), 5 au plus, cache 24 h, jamais journalisé ni mis en cache partagé (ADR 0020)                                         |
 | GET     | `/journeys?from=&to=&at=`  | itinéraires métro/RER/tram (F12, F13) : gares avec temps de marche (`IDFM:…~secondes`, 5 au plus), jusqu'à 5 itinéraires avec marche totale et prix estimé (`fare.ts`, ADR 0019) ; jamais de coordonnées |
 | GET     | `/disruptions?line=`       | perturbations en cours (SIRI Lite General Message, cache 30 s ; aucune en mode synthétique)                                                                                                              |
 

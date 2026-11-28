@@ -70,6 +70,8 @@ describe('journeyFormat', () => {
     expect(firstRide(j([leg(true, [])], 0))).toBeNull();
     expect(journeyBounds(j(legs, 0))).toEqual([2.3, 48.8, 2.4, 48.9]);
     expect(journeyBounds(j([], 0))).toBeNull();
+    // Adresse d'arrivée hors du tracé : incluse dans le cadrage
+    expect(journeyBounds(j(legs, 0), [[2.45, 48.95]])).toEqual([2.3, 48.8, 2.45, 48.95]);
   });
 
   it('étiquette les options entre elles', () => {
