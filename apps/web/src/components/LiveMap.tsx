@@ -8,7 +8,7 @@ import { CubeGeometry } from '@luma.gl/engine';
 import { Map as MapLibre, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type Journey, type Line, type Mode } from '@/lib/api';
+import { api, type Journey, type Line, type Mode, type Place } from '@/lib/api';
 import { hexToRgba, type RGBA } from '@/lib/colors';
 import { ATTRIBUTION, API_URL, INITIAL_VIEW, REALTIME_URL } from '@/lib/config';
 import { loadFavorites, type Favorite } from '@/lib/favorites';
@@ -154,6 +154,8 @@ export default function LiveMap() {
   const stationPointsRef = useRef<StationPoint[]>([]);
   // Itinéraire affiché sur la carte (F14)
   const routeRef = useRef<Journey | null>(null);
+  // Adresse d'arrivée (F17) : marche finale et repère tracés sur la carte
+  const destinationRef = useRef<Place | null>(null);
   // Lignes de l'itinéraire choisi : le reste du réseau est estompé (null = réseau normal)
   const focusRef = useRef<Set<string> | null>(null);
   const refocusRef = useRef<() => void>(() => {});
@@ -561,6 +563,14 @@ export default function LiveMap() {
       const j = routeRef.current;
       if (!j) return [];
       const walk: RGBA = themeRef.current === 'dark' ? [200, 200, 210, 200] : [90, 90, 100, 200];
+      // Marches de début (depuis ma position) et de fin (jusqu'à l'adresse), en pointillés
+      const first = j.legs[0]?.path[0];
+      const last = j.legs.at(-1)?.path.at(-1);
+      const me = positionRef.current;
+      const dest = destinationRef.current;
+      const ends: { path: [number, number][] }[] = [];
+      if (me && first && j.walkStartMin > 0) ends.push({ path: [[me.lon, me.lat], first] });
+      if (dest && last && j.walkEndMin > 0) ends.push({ path: [last, [dest.lon, dest.lat]] });
       const legs = j.legs.filter((l) => l.path.length > 1);
       const t = MAP_THEMES[themeRef.current];
       return [
@@ -584,6 +594,28 @@ export default function LiveMap() {
           widthUnits: 'pixels',
           capRounded: true,
           jointRounded: true,
+        }),
+        new PathLayer({
+          id: 'itineraire-marche',
+          data: ends,
+          getPath: (d: (typeof ends)[number]) => d.path,
+          getColor: walk,
+          getWidth: 3,
+          widthUnits: 'pixels',
+          capRounded: true,
+        }),
+        new ScatterplotLayer({
+          id: 'itineraire-destination',
+          data: dest ? [dest] : [],
+          getPosition: (d: Place) => [d.lon, d.lat],
+          getRadius: 9,
+          radiusUnits: 'pixels',
+          getFillColor: themeRef.current === 'dark' ? [34, 211, 238, 255] : [14, 116, 144, 255],
+          getLineColor: [255, 255, 255, 255],
+          getLineWidth: 3,
+          lineWidthUnits: 'pixels',
+          stroked: true,
+          updateTriggers: { getFillColor: themeRef.current },
         }),
         // Gares de l'itinéraire : arrêts traversés, plus grandes aux montées et descentes
         new ScatterplotLayer({
@@ -840,6 +872,7 @@ export default function LiveMap() {
   // Itinéraire affiché : seul lui est tracé, et ses lignes sont mises en avant (F14)
   function setRoute(j: Journey | null) {
     routeRef.current = j;
+    if (!j) destinationRef.current = null;
     const ids = j?.legs.flatMap((l) => (!l.walk && l.line ? [l.line.id] : [])) ?? [];
     focusRef.current = ids.length > 0 ? new Set(ids) : null;
     refocusRef.current();
@@ -861,9 +894,13 @@ export default function LiveMap() {
     syncUrl();
   };
 
-  const previewJourney = (j: Journey | null) => {
+  const previewJourney = (j: Journey | null, destination: Place | null) => {
+    destinationRef.current = destination;
     setRoute(j);
-    const b = j && journeyBounds(j);
+    const extra: [number, number][] = [];
+    if (destination) extra.push([destination.lon, destination.lat]);
+    if (positionRef.current) extra.push([positionRef.current.lon, positionRef.current.lat]);
+    const b = j && journeyBounds(j, extra);
     if (b && mapRef.current) {
       mapRef.current.fitBounds(
         [

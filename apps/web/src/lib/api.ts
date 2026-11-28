@@ -102,6 +102,13 @@ export interface StationWalk {
   walkSec: number;
 }
 
+/** Adresse géocodée (F17) */
+export interface Place {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(API_URL + path);
   if (!res.ok) throw new Error(`${res.status} ${path}`);
@@ -120,6 +127,8 @@ export const api = {
       `/journeys?from=${encodeURIComponent(enc(from))}&to=${encodeURIComponent(enc(to))}`,
     );
   },
+  /** Le texte saisi part au service d'adresses de l'État, via notre API (ADR 0020) */
+  geocode: (q: string) => get<Place[]>(`/geocode?q=${encodeURIComponent(q)}`),
   disruptions: () => get<Disruption[]>('/disruptions'),
   vehicle: (id: string) => get<VehicleDetail>(`/vehicles/${encodeURIComponent(id)}`),
 };

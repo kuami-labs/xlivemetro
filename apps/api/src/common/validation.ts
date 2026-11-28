@@ -23,6 +23,16 @@ export function searchQuery(value: unknown): string {
   return q;
 }
 
+/** Adresse saisie (F17) : 3 à 120 caractères, sans caractères de contrôle. */
+export function addressQuery(value: unknown): string {
+  const q = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  // eslint-disable-next-line no-control-regex
+  if (q.length < 3 || q.length > 120 || /[\u0000-\u001f\u007f]/.test(q)) {
+    throw new BadRequestException('l’adresse doit faire entre 3 et 120 caractères');
+  }
+  return q;
+}
+
 export const MODES = ['metro', 'rer', 'tram'] as const;
 export type Mode = (typeof MODES)[number];
 

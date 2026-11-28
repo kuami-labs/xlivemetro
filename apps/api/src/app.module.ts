@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaService } from './db/prisma.service.js';
+import { GeocodeClient } from './geocode/geocode.client.js';
+import { GeocodeController } from './geocode/geocode.controller.js';
+import { GeocodeService } from './geocode/geocode.service.js';
 import { HealthController } from './health/health.controller.js';
 import { RealtimeClient } from './realtime/realtime.client.js';
 import { ReferentialController } from './referential/referential.controller.js';
@@ -13,9 +16,11 @@ import { ReferentialService } from './referential/referential.service.js';
     // Limitation de débit par IP (docs/08-SECURITE.md) : API publique sans authentification
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
   ],
-  controllers: [HealthController, ReferentialController],
+  controllers: [HealthController, ReferentialController, GeocodeController],
   providers: [
     PrismaService,
+    GeocodeClient,
+    GeocodeService,
     RealtimeClient,
     ReferentialRepository,
     ReferentialService,

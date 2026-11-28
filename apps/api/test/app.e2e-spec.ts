@@ -3,21 +3,26 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { GeocodeClient } from '../src/geocode/geocode.client.js';
 import { RealtimeClient } from '../src/realtime/realtime.client.js';
 import { ReferentialRepository } from '../src/referential/referential.repository.js';
-import { CDG, DEFENSE, FakeRealtime, FakeRepository, M1, RERA } from './fakes.js';
+import { CDG, DEFENSE, FakeGeocoder, FakeRealtime, FakeRepository, M1, RERA } from './fakes.js';
 
 describe('API (e2e)', () => {
   let app: INestApplication<App>;
   let realtime: FakeRealtime;
+  let geocoder: FakeGeocoder;
 
   beforeEach(async () => {
     realtime = new FakeRealtime();
+    geocoder = new FakeGeocoder();
     const moduleFixture = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(ReferentialRepository)
       .useValue(new FakeRepository())
       .overrideProvider(RealtimeClient)
       .useValue(realtime)
+      .overrideProvider(GeocodeClient)
+      .useValue(geocoder)
       .compile();
     app = moduleFixture.createNestApplication();
     await app.init();
@@ -129,6 +134,18 @@ describe('API (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/journeys?from=${CDG.id}&to=${DEFENSE.id}&at=demain`)
       .expect(400);
+  });
+
+  it('GET /geocode : adresses d’Île-de-France, jamais en cache partagé', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/geocode?q=' + encodeURIComponent('20 avenue de Ségur'))
+      .expect(200)
+      .expect('Cache-Control', 'private, no-store');
+    expect(res.body).toEqual([
+      { label: '20 Avenue de Ségur 75007 Paris', lon: 2.3086, lat: 48.8507 },
+    ]);
+    expect(geocoder.queries).toEqual(['20 avenue de Ségur']);
+    await request(app.getHttpServer()).get('/geocode?q=ab').expect(400);
   });
 
   it('GET /trips/:id : arrêts restants, avec ou sans train en circulation', async () => {

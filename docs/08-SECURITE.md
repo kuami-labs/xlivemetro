@@ -112,6 +112,7 @@ Certains fichiers changent les règles du projet pour tout le monde : environnem
 | Entrées invalides      | validation de chaque DTO (`class-validator`) ; bbox et identifiants validés côté Go                                                                             |
 | Abus                   | limitation de débit par IP sur l'API, le WebSocket et la recherche                                                                                              |
 | Données personnelles   | aucune conservée : pas de compte, pas de cookie de suivi, IP tronquée dans les logs                                                                             |
+| Adresse saisie (F17)   | relayée à l'IGN par l'API (ADR 0020), jamais journalisée ; cache mémoire seulement, réponse `private, no-store` ; résultats traités comme données               |
 | Position du visiteur   | jamais envoyée au serveur : gares proches calculées dans le navigateur, seuls des identifiants de gares transmis ; ni journalisée ni dans l'URL (PRD, ADR 0017) |
 | Dépendance vulnérable  | Dependabot, `pnpm audit`                                                                                                                                        |
 

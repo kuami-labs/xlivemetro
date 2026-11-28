@@ -15,8 +15,11 @@ export function firstRide(j: Journey) {
 }
 
 /** Emprise de l'itinéraire [ouest, sud, est, nord], pour cadrer la carte. */
-export function journeyBounds(j: Journey): [number, number, number, number] | null {
-  const pts = j.legs.flatMap((l) => l.path);
+export function journeyBounds(
+  j: Journey,
+  extra: [number, number][] = [],
+): [number, number, number, number] | null {
+  const pts = [...j.legs.flatMap((l) => l.path), ...extra];
   if (pts.length === 0) return null;
   let [w, s, e, n] = [pts[0][0], pts[0][1], pts[0][0], pts[0][1]];
   for (const [lon, lat] of pts) {
