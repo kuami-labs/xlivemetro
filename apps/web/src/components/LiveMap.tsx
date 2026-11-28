@@ -108,6 +108,29 @@ function initialSelection(params: URLSearchParams): Selection {
   return null;
 }
 
+interface RouteStop {
+  at: [number, number];
+  color: RGBA;
+  /** Montée, descente ou correspondance */
+  key: boolean;
+}
+
+/** Gares d'un itinéraire (une par point), les montées et descentes marquées. */
+function routeStops(j: Journey): RouteStop[] {
+  const out = new Map<string, RouteStop>();
+  for (const l of j.legs) {
+    if (l.walk || !l.line) continue;
+    const color = hexToRgba(l.line.color);
+    l.path.forEach((at, i) => {
+      const k = at.join(',');
+      const key = i === 0 || i === l.path.length - 1;
+      const prev = out.get(k);
+      if (!prev || (key && !prev.key)) out.set(k, { at, color, key });
+    });
+  }
+  return [...out.values()];
+}
+
 /**
  * Carte 3D : fond MapLibre (bâtiments, ciel, lignes) + trains deck.gl en surcouche.
  * Les positions sont interpolées à chaque image hors de React (docs/04-FRONTEND.md) ;
@@ -307,25 +330,11 @@ export default function LiveMap() {
       applyFocus();
     }
 
-    // Itinéraire choisi : seul son tracé est net ; ses lignes restent devinables (branches
-    // comprises), le reste du réseau passe au second plan
+    // Itinéraire choisi : le réseau est masqué, seul l'itinéraire reste (tracé, gares, trains)
     function applyFocus() {
-      const ids = focusRef.current;
-      const halo = MAP_THEMES[themeRef.current].lineHaloOpacity;
-      const inRoute = ['in', ['get', 'id'], ['literal', ids ? [...ids] : []]];
-      if (map.getLayer('lignes')) {
-        map.setPaintProperty(
-          'lignes',
-          'line-opacity',
-          (ids ? ['case', inRoute, 0.35, 0.1] : 1) as never,
-        );
-      }
-      if (map.getLayer('lignes-halo')) {
-        map.setPaintProperty(
-          'lignes-halo',
-          'line-opacity',
-          (ids ? ['case', inRoute, halo * 0.3, halo * 0.08] : halo) as never,
-        );
+      const visibility = focusRef.current ? 'none' : 'visible';
+      for (const id of ['lignes-halo', 'lignes']) {
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visibility);
       }
     }
     refocusRef.current = () => {
@@ -345,22 +354,24 @@ export default function LiveMap() {
       if (!linesGeo) return;
       filterLines();
       const t = MAP_THEMES[themeRef.current];
-      staticLayers = [
-        new ScatterplotLayer<StationFeature>({
-          id: 'gares',
-          data: stations,
-          getPosition: (f) => f.geometry.coordinates,
-          getRadius: 5,
-          radiusUnits: 'pixels',
-          getFillColor: t.station.fill,
-          getLineColor: t.station.line,
-          lineWidthMinPixels: 1.5,
-          stroked: true,
-          pickable: true,
-          opacity: focusRef.current ? 0.25 : 1,
-          updateTriggers: { getFillColor: themeRef.current, getLineColor: themeRef.current },
-        }),
-      ];
+      // Réseau masqué pendant qu'un itinéraire est choisi : ses gares sont dans routeLayers
+      staticLayers = focusRef.current
+        ? []
+        : [
+            new ScatterplotLayer<StationFeature>({
+              id: 'gares',
+              data: stations,
+              getPosition: (f) => f.geometry.coordinates,
+              getRadius: 5,
+              radiusUnits: 'pixels',
+              getFillColor: t.station.fill,
+              getLineColor: t.station.line,
+              lineWidthMinPixels: 1.5,
+              stroked: true,
+              pickable: true,
+              updateTriggers: { getFillColor: themeRef.current, getLineColor: themeRef.current },
+            }),
+          ];
     }
     rebuildRef.current = rebuild;
 
@@ -407,7 +418,6 @@ export default function LiveMap() {
       fill = new Uint8Array(n * 4);
       outline = new Uint8Array(n * 4);
       widths = new Float32Array(n);
-      const focus = focusRef.current;
       for (let i = 0; i < n; i++) {
         const theoretical = (frame.flags[i] & THEORETICAL) !== 0;
         const d = frame.delays[i];
@@ -423,11 +433,6 @@ export default function LiveMap() {
           i * 4,
         );
         widths[i] = ringWidth(d, theoretical);
-        // Trains hors de l'itinéraire choisi : presque transparents
-        if (focus && !focus.has(frame.routeIds[i])) {
-          fill[i * 4 + 3] = 35;
-          outline[i * 4 + 3] = 35;
-        }
       }
     }
 
@@ -435,21 +440,18 @@ export default function LiveMap() {
     function trainLayers(f: VehicleFrame, t: number): Layer[] {
       const n = f.ids.length;
       const rep = representationRef.current;
-      const color = (i: number): RGBA => [
-        fill[i * 4],
-        fill[i * 4 + 1],
-        fill[i * 4 + 2],
-        fill[i * 4 + 3],
-      ];
+      const color = (i: number): RGBA => [fill[i * 4], fill[i * 4 + 1], fill[i * 4 + 2], 255];
       const pos = (i: number): [number, number] => [positions[i * 2], positions[i * 2 + 1]];
-      const idx = { length: n };
+      // Données = index des trains (getTransformMatrix ne reçoit que l'objet) ; pendant un
+      // itinéraire, seulement les trains de ses lignes (le reste du réseau est masqué)
+      const focus = focusRef.current;
+      const rows: number[] = [];
+      for (let i = 0; i < n; i++) if (!focus || focus.has(f.routeIds[i])) rows.push(i);
       const trigger = { getPosition: t, getSourcePosition: t, getTargetPosition: t };
 
       if (rep === '3d' && map.getZoom() >= MESH_MIN_ZOOM) {
         const halo = MAP_THEMES[themeRef.current].halo;
         const mode = (i: number) => lineModes.get(f.routeIds[i]) ?? 'metro';
-        // Données = index des trains : getTransformMatrix ne reçoit que l'objet, pas son index
-        const rows = Array.from({ length: n }, (_, i) => i);
         return [
           new ScatterplotLayer({
             id: 'trains-halo',
@@ -479,12 +481,12 @@ export default function LiveMap() {
         return [
           new IconLayer({
             id: 'trains-fleches',
-            data: idx,
+            data: rows,
             getIcon: () => ARROW_ICON,
-            getPosition: (_: unknown, { index }: { index: number }) => pos(index),
-            getColor: (_: unknown, { index }: { index: number }) => color(index),
+            getPosition: (index: number) => pos(index),
+            getColor: (index: number) => color(index),
             // deck.gl tourne dans le sens trigonométrique ; le cap est dans le sens horaire
-            getAngle: (_: unknown, { index }: { index: number }) => -f.bearings[index],
+            getAngle: (index: number) => -f.bearings[index],
             // Petites flèches en vue d'ensemble (près de 1 000 trains), plus grandes de près
             getSize: arrowSize(map.getZoom()),
             sizeUnits: 'pixels',
@@ -499,20 +501,20 @@ export default function LiveMap() {
       return [
         new LineLayer({
           id: 'trains-sillage',
-          data: idx,
-          getSourcePosition: (_: unknown, { index }: { index: number }) => pos(index),
-          getTargetPosition: (_: unknown, { index }: { index: number }) =>
+          data: rows,
+          getSourcePosition: (index: number) => pos(index),
+          getTargetPosition: (index: number) =>
             behind(
               positions[index * 2],
               positions[index * 2 + 1],
               f.bearings[index],
               (f.flags[index] & AT_STOP) !== 0 ? 0 : trailMeters(f.speeds[index]),
             ),
-          getColor: (_: unknown, { index }: { index: number }) => [
+          getColor: (index: number) => [
             fill[index * 4],
             fill[index * 4 + 1],
             fill[index * 4 + 2],
-            Math.round((90 * fill[index * 4 + 3]) / 255),
+            90,
           ],
           getWidth: 5,
           widthUnits: 'pixels',
@@ -520,22 +522,36 @@ export default function LiveMap() {
         }),
         new ScatterplotLayer({
           id: 'trains-pastilles',
-          data: {
-            length: n,
-            attributes: {
-              getPosition: { value: positions, size: 2 },
-              getFillColor: { value: fill, size: 4, normalized: true },
-              getLineColor: { value: outline, size: 4, normalized: true },
-              getLineWidth: { value: widths, size: 1 },
-            },
-          },
+          // Tous les trains : attributs binaires (rapide) ; pendant un itinéraire : sous-ensemble
+          data: focus
+            ? rows
+            : {
+                length: n,
+                attributes: {
+                  getPosition: { value: positions, size: 2 },
+                  getFillColor: { value: fill, size: 4, normalized: true },
+                  getLineColor: { value: outline, size: 4, normalized: true },
+                  getLineWidth: { value: widths, size: 1 },
+                },
+              },
+          ...(focus && {
+            getPosition: (index: number) => pos(index),
+            getFillColor: (index: number) => color(index),
+            getLineColor: (index: number): RGBA => [
+              outline[index * 4],
+              outline[index * 4 + 1],
+              outline[index * 4 + 2],
+              outline[index * 4 + 3],
+            ],
+            getLineWidth: (index: number) => widths[index],
+          }),
           getRadius: 6,
           radiusUnits: 'pixels',
           radiusMinPixels: 3,
           stroked: true,
           lineWidthUnits: 'pixels',
           pickable: true,
-          updateTriggers: { getPosition: t },
+          updateTriggers: { getPosition: t, getFillColor: fill, getLineColor: outline },
         }),
       ];
     }
@@ -546,6 +562,7 @@ export default function LiveMap() {
       if (!j) return [];
       const walk: RGBA = themeRef.current === 'dark' ? [200, 200, 210, 200] : [90, 90, 100, 200];
       const legs = j.legs.filter((l) => l.path.length > 1);
+      const t = MAP_THEMES[themeRef.current];
       return [
         new PathLayer({
           id: 'itineraire-halo',
@@ -567,6 +584,20 @@ export default function LiveMap() {
           widthUnits: 'pixels',
           capRounded: true,
           jointRounded: true,
+        }),
+        // Gares de l'itinéraire : arrêts traversés, plus grandes aux montées et descentes
+        new ScatterplotLayer({
+          id: 'itineraire-gares',
+          data: routeStops(j),
+          getPosition: (d: RouteStop) => d.at,
+          getRadius: (d: RouteStop) => (d.key ? 7 : 4),
+          radiusUnits: 'pixels',
+          getFillColor: t.station.fill,
+          getLineColor: (d: RouteStop) => d.color,
+          getLineWidth: (d: RouteStop) => (d.key ? 3 : 2),
+          lineWidthUnits: 'pixels',
+          stroked: true,
+          updateTriggers: { getFillColor: themeRef.current },
         }),
       ];
     }
@@ -642,7 +673,9 @@ export default function LiveMap() {
         if (info.layer?.id === 'gares' && info.object) {
           select({ kind: 'station', id: (info.object as StationFeature).properties.id });
         } else if (TRAIN_LAYERS.has(info.layer?.id ?? '') && frame && info.index >= 0) {
-          select({ kind: 'vehicle', id: frame.ids[info.index] });
+          // Données en index de trains (sous-ensemble pendant un itinéraire) ou attributs binaires
+          const i = typeof info.object === 'number' ? info.object : info.index;
+          select({ kind: 'vehicle', id: frame.ids[i] });
         }
         syncUrl();
       },
