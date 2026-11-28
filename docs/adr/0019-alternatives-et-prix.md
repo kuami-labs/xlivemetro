@@ -26,7 +26,7 @@ Option 3, dans `internal/journey` (`Alternatives`).
 - 5 itinéraires au plus, triés par arrivée.
 - **Labels** calculés dans le navigateur, relatifs aux options affichées, seulement si le critère varie ; en cas d'égalité, la première option de la liste.
 - **Prix estimé** calculé par l'API (`fare.ts`) en tickets à l'unité plein tarif : Métro-Train-RER si métro ou RER, Bus-Tram en plus si tram, ticket aéroports à la place du Métro-Train-RER si une gare d'Orly (métro 14) ou de Roissy-CDG (RER B) est desservie. Toujours affiché comme **estimé** ; les forfaits Navigo et Liberté+ ne sont pas pris en compte.
-- **Carte** : seul l'itinéraire choisi est tracé ; les autres lignes, trains et gares sont estompés (les lignes de l'itinéraire restent devinables).
+- **Carte** : seul l'itinéraire choisi est affiché (tracé, gares traversées, trains de ses lignes) ; le reste du réseau (lignes, gares, autres trains) est masqué jusqu'à la fermeture du panneau ou la fin du trajet. Une première version estompait le réseau ; masqué a été préféré à l'usage (2026-11-28) pour une carte plus lisible.
 
 ## Conséquences
 
